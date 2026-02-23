@@ -237,7 +237,7 @@ class EnhancedFundamentalsFetcher:
     ) -> str:
         """Create fundamental snapshot."""
         # Fetch data if not provided
-        if quarterly_data is None:
+        if not quarterly_data:
             quarterly_data = self.fetch_quarterly_data(ticker, use_fmp=use_fmp)
 
         # If data came from FMP and has enhanced fields, use FMP snapshot
@@ -289,7 +289,7 @@ class EnhancedFundamentalsFetcher:
         Returns:
             Dict with trend analysis and penalty
         """
-        if quarterly_data is None:
+        if not quarterly_data:
             quarterly_data = self.fetch_quarterly_data(ticker, use_fmp=use_fmp)
 
         return analyze_fundamentals_for_signal(quarterly_data)

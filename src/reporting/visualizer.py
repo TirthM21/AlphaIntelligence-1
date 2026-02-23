@@ -62,6 +62,8 @@ class MarketVisualizer:
         index_perf: Dict[str, float],
         sector_perf: List[Dict],
         market_status: Dict,
+        cap_perf: Dict[str, float] | None = None,
+        notable_movers: List[Dict] | None = None,
     ) -> List[ChartArtifact]:
         """Build the default chart suite for each newsletter run."""
         artifacts: List[ChartArtifact] = []
@@ -99,7 +101,94 @@ class MarketVisualizer:
                 )
             )
 
+        cap_path = self.generate_market_cap_leadership_chart(cap_perf=cap_perf or {})
+        if cap_path:
+            artifacts.append(
+                ChartArtifact(
+                    key="market_cap_leadership",
+                    title="Market-Cap Leadership",
+                    caption="Figure 4. Large/Mid/Small-cap leadership for the current session.",
+                    path=cap_path,
+                )
+            )
+
+        movers_path = self.generate_notable_movers_chart(movers=notable_movers or [])
+        if movers_path:
+            artifacts.append(
+                ChartArtifact(
+                    key="notable_movers",
+                    title="Best & Worst Movers",
+                    caption="Figure 5. Top absolute movers from the daily flow monitor.",
+                    path=movers_path,
+                )
+            )
+
         return artifacts
+
+    def generate_market_cap_leadership_chart(self, cap_perf: Dict[str, float]) -> str:
+        if not cap_perf:
+            return ""
+
+        labels = list(cap_perf.keys())
+        values = [float(cap_perf[k]) for k in labels]
+        colors = [self.style.palette["positive"] if v >= 0 else self.style.palette["negative"] for v in values]
+
+        fig, ax = plt.subplots(figsize=(8, 4.6))
+        bars = ax.bar(labels, values, color=colors, alpha=0.9)
+        ax.axhline(0, color=self.style.palette["grid"], linewidth=1)
+        ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
+        ax.set_title("Market-Cap Leadership")
+        ax.set_ylabel("Return %")
+
+        for idx, bar in enumerate(bars):
+            value = values[idx]
+            ax.text(bar.get_x() + bar.get_width() / 2, value + (0.12 if value >= 0 else -0.18), f"{value:+.2f}%", ha="center", fontsize=9)
+
+        fig.tight_layout()
+        output_path = self._build_chart_path("market_cap_leadership")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
+        plt.close(fig)
+        return str(output_path)
+
+    def generate_notable_movers_chart(self, movers: List[Dict]) -> str:
+        if not movers:
+            return ""
+
+        normalized = []
+        for item in movers:
+            symbol = str(item.get("symbol") or "").strip()
+            if not symbol:
+                continue
+            try:
+                change_pct = float(item.get("change_pct") or 0.0)
+            except (TypeError, ValueError):
+                change_pct = 0.0
+            normalized.append((symbol, change_pct))
+
+        if not normalized:
+            return ""
+
+        ranked = sorted(normalized, key=lambda x: abs(x[1]), reverse=True)[:8]
+        labels = [x[0] for x in ranked]
+        values = [x[1] for x in ranked]
+        colors = [self.style.palette["positive"] if v >= 0 else self.style.palette["negative"] for v in values]
+
+        fig, ax = plt.subplots(figsize=(10, 4.8))
+        bars = ax.bar(labels, values, color=colors, alpha=0.9)
+        ax.axhline(0, color=self.style.palette["grid"], linewidth=1)
+        ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
+        ax.set_title("Best & Worst Movers (Absolute % Move)")
+        ax.set_ylabel("Change %")
+
+        for idx, bar in enumerate(bars):
+            value = values[idx]
+            ax.text(bar.get_x() + bar.get_width() / 2, value + (0.1 if value >= 0 else -0.16), f"{value:+.2f}%", ha="center", fontsize=8)
+
+        fig.tight_layout()
+        output_path = self._build_chart_path("best_worst_movers")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
+        plt.close(fig)
+        return str(output_path)
 
     def generate_market_breadth_snapshot(self, index_perf: Dict[str, float], market_status: Dict) -> str:
         """Create a combined chart for breadth indicators and index moves."""

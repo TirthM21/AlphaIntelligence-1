@@ -659,6 +659,15 @@ def main():
                 top_sells=sell_signals,
                 fund_performance_md=fund_performance_md
             )
+
+            # Maintain stable latest path for CI summaries and downstream consumers.
+            latest_newsletter_path = Path('./data/daily_newsletter.md')
+            latest_newsletter_path.parent.mkdir(parents=True, exist_ok=True)
+            latest_newsletter_path.write_text(Path(newsletter_path).read_text(encoding='utf-8'), encoding='utf-8')
+            html_source = Path(newsletter_path).with_suffix('.html')
+            if html_source.exists():
+                Path('./data/daily_newsletter.html').write_text(html_source.read_text(encoding='utf-8'), encoding='utf-8')
+
             logger.info(f"Newsletter ready: {newsletter_path}")
             
             # Send Email

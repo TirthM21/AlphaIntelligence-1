@@ -76,6 +76,7 @@ class NewsletterGenerator:
         self.portfolio_path = Path(portfolio_path)
         self.config_path = Path(config_path)
         self.newsletter_state_path = Path("./data/cache/newsletter_state.json")
+        self.template_path = Path("src/templates/newsletter_light.html")
         self.newsletter_config = self._load_newsletter_config()
         self.provider_matrix = self._build_provider_matrix(self.newsletter_config)
         self.provider_status = self._build_provider_status()
@@ -749,7 +750,7 @@ class NewsletterGenerator:
     def _build_evidence_payload(
         self,
         market_news: List[Dict[str, Any]],
-        sector_perf: Dict[str, float],
+        sector_perf: List[Dict[str, Any]] | Dict[str, float],
         index_perf: Dict[str, float],
         top_buys: List[Dict[str, Any]],
         top_sells: List[Dict[str, Any]],
@@ -762,11 +763,18 @@ class NewsletterGenerator:
 
         for ticker in index_perf.keys():
             allowed_named_entities.add(str(ticker).upper())
-        for ticker in sector_perf.keys():
-            allowed_named_entities.add(str(ticker))
+        if isinstance(sector_perf, dict):
+            for ticker in sector_perf.keys():
+                allowed_named_entities.add(str(ticker))
+        else:
+            for row in sector_perf or []:
+                if isinstance(row, dict):
+                    sector_name = str(row.get("sector") or "").strip()
+                    if sector_name:
+                        allowed_named_entities.add(sector_name)
 
         for item in top_buys[:12] + top_sells[:12]:
-            symbol = str(item.get("symbol", "")).strip().upper()
+            symbol = str(item.get("symbol") or item.get("ticker") or "").strip().upper()
             if symbol:
                 allowed_named_entities.add(symbol)
             move = item.get("change_pct")
@@ -792,7 +800,23 @@ class NewsletterGenerator:
                 for token in re.findall(r"\b[A-Z]{2,5}\b", title):
                     allowed_named_entities.add(token)
 
-        for move in list(index_perf.values()) + list(sector_perf.values()):
+        sector_moves: List[float] = []
+        if isinstance(sector_perf, dict):
+            sector_moves = [float(v) for v in sector_perf.values() if isinstance(v, (int, float))]
+        else:
+            for row in sector_perf or []:
+                if not isinstance(row, dict):
+                    continue
+                raw_move = row.get("change")
+                if raw_move is None:
+                    raw_move = row.get("changesPercentage")
+                try:
+                    move_val = float(str(raw_move).replace("%", ""))
+                except (TypeError, ValueError):
+                    continue
+                sector_moves.append(move_val)
+
+        for move in list(index_perf.values()) + sector_moves:
             if isinstance(move, (int, float)):
                 allowed_percentages.add(f"{float(move):.2f}%")
 
@@ -1172,6 +1196,8 @@ class NewsletterGenerator:
             index_perf=index_perf,
             sector_perf=sector_perf,
             market_status=market_status or {},
+            cap_perf=cap_perf,
+            notable_movers=notable_movers,
         )
 
         # 5. Build content (institutional style, concise + actionable)
@@ -1676,6 +1702,14 @@ class NewsletterGenerator:
 
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(final_md)
+
+        # Write HTML companion for email clients while preserving markdown archive.
+        try:
+            html_companion_path = output_path_obj.with_suffix('.html')
+            html_body = self.ai_agent.markdown_to_html(final_md)
+            html_companion_path.write_text(html_body, encoding='utf-8')
+        except Exception as html_err:
+            logger.warning(f"Failed to write newsletter HTML companion: {html_err}")
 
         state_runs = state.get("runs", [])
         state_runs.append({
@@ -2573,5 +2607,13 @@ class NewsletterGenerator:
         
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(final_md)
+
+        # Write HTML companion for email clients while preserving markdown archive.
+        try:
+            html_companion_path = output_path_obj.with_suffix('.html')
+            html_body = self.ai_agent.markdown_to_html(final_md)
+            html_companion_path.write_text(html_body, encoding='utf-8')
+        except Exception as html_err:
+            logger.warning(f"Failed to write newsletter HTML companion: {html_err}")
 
         return output_path
