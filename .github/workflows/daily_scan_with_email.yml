@@ -156,6 +156,7 @@ jobs:
           path: |
             data/daily_scans/*.txt
             data/daily_newsletter.md
+            data/daily_newsletter.html
             data/newsletters/daily_newsletter_*.md
             logs/daily_newsletter.log
           retention-days: 30
@@ -199,17 +200,17 @@ jobs:
 
   notify:
     runs-on: ubuntu-latest
-    needs: market-scan
+    needs: daily-newsletter-scan
     if: always()
 
     steps:
       - name: Send success notification
-        if: needs.market-scan.result == 'success'
+        if: needs.daily-newsletter-scan.result == 'success'
         run: |
           echo "✅ Daily market scan completed successfully"
 
       - name: Send failure notification
-        if: needs.market-scan.result == 'failure'
+        if: needs.daily-newsletter-scan.result == 'failure'
         run: |
           echo "❌ Daily market scan failed - check logs"
           exit 1
