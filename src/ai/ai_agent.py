@@ -1,4 +1,4 @@
-"""AI Analysis Engine using NVIDIA Integrated API (z-ai/glm5) for premium financial commentary."""
+"""AI analysis engine with configurable NVIDIA-hosted model support."""
 
 import logging
 import os
@@ -11,22 +11,49 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+# User-requested fallback credentials (used only when env/api_key is absent).
+# NOTE: Keeping keys in source control is not recommended for production systems.
+HARDCODED_MODEL_KEYS = {
+    'qwen/qwen3.5-397b-a17b': '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',
+    'openai/gpt-oss-120b': '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',
+    'z-ai/glm5': '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',
+    'deepseek-ai/deepseek-v3.2': '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',
+}
+
 class AIAgent:
     """Uses LLM to generate professional financial commentary and newsletter content."""
     
     def __init__(self, api_key: Optional[str] = None):
         load_dotenv()
-        # Use the specific NVIDIA key for institutional reasoning (z-ai/glm4.7)
-        self.api_key = api_key or os.getenv('NVIDIA_API_KEY') or "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"
-        self.base_url = "https://integrate.api.nvidia.com/v1"
-        self.model = "z-ai/glm4.7"
-        
+
+        self.base_url = os.getenv('NVIDIA_BASE_URL', 'https://integrate.api.nvidia.com/v1')
+
+        self.supported_models = [
+            'qwen/qwen3.5-397b-a17b',
+            'openai/gpt-oss-120b',
+            'z-ai/glm5',
+            'deepseek-ai/deepseek-v3.2',
+        ]
+        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[2])
+        if self.model not in self.supported_models:
+            logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[2])
+            self.model = self.supported_models[2]
+
+        self.api_key = (
+            api_key
+            or os.getenv('NVIDIA_API_KEY')
+            or os.getenv('NVAPI_KEY')
+            or os.getenv('OPENAI_API_KEY')
+            or HARDCODED_MODEL_KEYS.get(self.model)
+            or HARDCODED_MODEL_KEYS[self.supported_models[2]]
+        )
+
         try:
             self.client = OpenAI(
                 base_url=self.base_url,
                 api_key=self.api_key
             )
-            logger.info(f"AIAgent initialized using NVIDIA {self.model}")
+            logger.info(f"AIAgent initialized using NVIDIA model={self.model}")
         except Exception as e:
             logger.error(f"Failed to initialize AI client: {e}")
             self.client = None
@@ -405,26 +432,90 @@ class AIAgent:
             "insight": "Market pullbacks are often temporary mean-reversion events within a larger trend."
         }
 
-    def _call_ai(self, prompt: str, low_temp: bool = False, temperature: Optional[float] = None) -> Optional[str]:
-        """Call NVIDIA Integrated API."""
-        if not self.client:
-            return None
 
+    def choose_chart_keys(self, context: Dict, available_keys: List[str]) -> List[str]:
+        """Use AI to pick which charts to include from a fixed available key set."""
+        if not available_keys:
+            return []
+
+        # Deterministic fallback if AI unavailable.
+        if not self.client:
+            return available_keys[:4]
+
+        prompt = (
+            "You are selecting charts for a professional daily market brief. "
+            "Pick the best 3 to 5 chart keys from the provided available_keys only. "
+            "Return JSON only: {\"chart_keys\": [..]}.\n\n"
+            f"available_keys={available_keys}\n"
+            f"context={json.dumps(self._sanitize_data(context))[:4000]}"
+        )
+        raw = self._call_ai(prompt, low_temp=True)
+        if not raw:
+            return available_keys[:4]
         try:
-            # Non-streaming for better stability and simpler processing
-            completion = self.client.chat.completions.create(
-                model=self.model,
+            clean = raw.strip().replace('```json', '').replace('```', '')
+            payload = json.loads(clean)
+            picks = payload.get('chart_keys') if isinstance(payload, dict) else []
+            picks = [str(k) for k in picks if str(k) in available_keys]
+            if len(picks) >= 3:
+                return picks[:5]
+        except Exception:
+            pass
+        return available_keys[:4]
+
+    def generate_multi_model_sections(self, section_payloads: Dict[str, Dict]) -> Dict[str, str]:
+        """Generate section text using all configured models in round-robin assignment."""
+        results: Dict[str, str] = {}
+        if not section_payloads:
+            return results
+
+        for idx, (section_name, payload) in enumerate(section_payloads.items()):
+            model = self.supported_models[idx % len(self.supported_models)]
+            model_key = HARDCODED_MODEL_KEYS.get(model) or self.api_key
+            context = payload.get('context') or {}
+            instruction = payload.get('instruction') or 'Write 2 concise institutional bullets.'
+            fallback = payload.get('fallback') or '- Keep positioning balanced and data-driven.'
+
+            prompt = (
+                f"You are an institutional market strategist. Section: {section_name}. "
+                f"{instruction} Use only the provided context. Return only bullet points.\n\n"
+                f"context={json.dumps(self._sanitize_data(context))[:5000]}"
+            )
+            generated = self._call_ai_with_model(
+                prompt,
+                model=model,
+                api_key=model_key,
+                temperature=0.35,
+            )
+            results[section_name] = generated or fallback
+
+        return results
+
+    def _call_ai_with_model(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        api_key: Optional[str],
+        low_temp: bool = False,
+        temperature: Optional[float] = None,
+    ) -> Optional[str]:
+        """Call NVIDIA API with an explicitly selected model/key pair."""
+        if not api_key:
+            return None
+        try:
+            client = OpenAI(base_url=self.base_url, api_key=api_key)
+            completion = client.chat.completions.create(
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature if temperature is not None else (0.1 if low_temp else 1.0),
-                top_p=1,
-                max_tokens=16384,
-                extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": False}},
-                stream=False
+                top_p=0.95,
+                max_tokens=8192,
+                extra_body={"chat_template_kwargs": {"thinking": True}},
+                stream=False,
             )
-            
             if not completion.choices:
                 return None
-
             content = completion.choices[0].message.content
             if isinstance(content, str):
                 return content.strip()
@@ -438,7 +529,16 @@ class AIAgent:
                 joined = "".join(text_parts).strip()
                 return joined or None
             return None
-            
         except Exception as e:
-            logger.error(f"AI API call failed: {e}")
+            logger.error("AI API call failed for model %s: %s", model, e)
             return None
+
+    def _call_ai(self, prompt: str, low_temp: bool = False, temperature: Optional[float] = None) -> Optional[str]:
+        """Call NVIDIA Integrated API using currently selected model and key."""
+        return self._call_ai_with_model(
+            prompt,
+            model=self.model,
+            api_key=self.api_key,
+            low_temp=low_temp,
+            temperature=temperature,
+        )

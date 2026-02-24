@@ -1191,13 +1191,24 @@ class NewsletterGenerator:
             except Exception as e:
                 logger.error(f"Index performance check failed: {e}")
 
-        # 4. Generate Default Chart Suite
+        # 4. AI-assisted chart selection from a fixed chart registry.
+        available_chart_keys = self.visualizer.available_chart_keys()
+        chart_context = {
+            "index_perf": index_perf,
+            "sector_perf_count": len(sector_perf or []),
+            "market_status": market_status or {},
+            "cap_perf": cap_perf,
+            "notable_movers_count": len(notable_movers or []),
+        }
+        selected_chart_keys = self.ai_agent.choose_chart_keys(chart_context, available_chart_keys)
+
         chart_artifacts: List[ChartArtifact] = self.visualizer.generate_default_charts(
             index_perf=index_perf,
             sector_perf=sector_perf,
             market_status=market_status or {},
             cap_perf=cap_perf,
             notable_movers=notable_movers,
+            selected_keys=selected_chart_keys,
         )
 
         # 5. Build content (institutional style, concise + actionable)
@@ -1385,6 +1396,38 @@ class NewsletterGenerator:
         content.extend(macro_render.get("warning", []))
         content.extend(macro_render.get("risk", []))
         content.append("")
+
+        # --- SECTION: MULTI-MODEL AI DESK NOTES ---
+        ai_sections = self.ai_agent.generate_multi_model_sections(
+            {
+                "Tape Structure": {
+                    "instruction": "Write exactly 2 concise bullets on tape structure and participation.",
+                    "context": {"index_perf": index_perf, "breadth": market_status.get("breadth", {})},
+                    "fallback": "- Breadth and index action are mixed; avoid oversized directional bets.\n- Let confirmation drive adds rather than front-running moves.",
+                },
+                "Macro-Rate Lens": {
+                    "instruction": "Write exactly 2 concise bullets on macro/rates implications for risk positioning.",
+                    "context": {"macro_snapshot": macro_render.get("snapshot", []), "rates": macro_render.get("rates", [])},
+                    "fallback": "- Macro inputs remain noisy; prioritize resilient balance sheets.\n- Keep duration and cyclicality balanced until event risk clears.",
+                },
+                "Sector Rotation": {
+                    "instruction": "Write exactly 2 concise bullets on sector leadership and laggard risk.",
+                    "context": {"sector_perf_top": sector_perf[:5] if isinstance(sector_perf, list) else []},
+                    "fallback": "- Leadership is narrow; prefer sectors with persistent relative strength.\n- Lagging groups may stay weak without fresh catalysts.",
+                },
+                "Execution Plan": {
+                    "instruction": "Write exactly 2 concise bullets with execution and risk-control guidance.",
+                    "context": {"top_buys": top_buys[:5], "top_sells": top_sells[:5], "movers": notable_movers[:5]},
+                    "fallback": "- Scale into entries and predefine invalidation levels.\n- Reduce exposure into event-driven volatility spikes.",
+                },
+            }
+        )
+        if ai_sections:
+            content.append("### AI Multi-Model Desk Notes")
+            for section_name, section_text in ai_sections.items():
+                content.append(f"#### {section_name}")
+                content.append(section_text)
+                content.append("")
 
         # --- SECTION: SECTOR PERFORMANCE ---
         if sector_perf:
@@ -2004,11 +2047,30 @@ class NewsletterGenerator:
         min_sentiment_confidence = float(quarterly_cfg.get("trending_min_sentiment_confidence", 0.35))
         min_trending_entities = int(quarterly_cfg.get("trending_min_entities", 1))
 
-        # Enhanced AI Thesis for Quarterly
-        ai_thesis = "Institutional compounder selection focused on capital efficiency and moat depth."
-        if self.ai_agent.client:
-            prompt = f"Act as a hedge fund macro strategist. Provide a 4-sentence quarterly investment thesis for Q{q} {year} focusing on inflation, interest rates, and sector leadership. Be precise and sophisticated."
-            ai_thesis = self.ai_agent._call_ai(prompt)
+        def _build_grounded_quarterly_thesis(news_items: List[Dict[str, Any]]) -> str:
+            """Create a concise thesis anchored to observable inputs (no speculative macro prose)."""
+            if not news_items:
+                return (
+                    "Data quality was mixed this run, so the quarterly thesis is constrained: "
+                    "maintain balanced risk, prioritize cash-flow quality, and avoid large regime bets "
+                    "until macro event coverage improves."
+                )
+
+            theme_counts: Dict[str, int] = {}
+            for item in news_items:
+                theme = str(item.get("theme") or "macro").lower()
+                theme_counts[theme] = theme_counts.get(theme, 0) + 1
+
+            ranked_themes = sorted(theme_counts.items(), key=lambda x: x[1], reverse=True)
+            top_themes = [theme for theme, _ in ranked_themes[:2]]
+            theme_phrase = " and ".join(top_themes) if top_themes else "macro"
+            return (
+                f"Quarterly stance is evidence-led: recent coverage is concentrated in {theme_phrase}. "
+                "Portfolio construction should stay diversified, favor higher-quality balance sheets, "
+                "and size exposures gradually around confirmed data rather than narrative forecasts."
+            )
+
+        ai_thesis = _build_grounded_quarterly_thesis(macro_news_items)
 
         state = self._load_newsletter_state()
         quarterly_history = state.get("quarterly_diagnostics", []) if isinstance(state, dict) else []
@@ -2354,6 +2416,7 @@ class NewsletterGenerator:
         content.append("### 🛰️ Asset Class Allocation")
         content.append(f"- **Core (60%)**: {len(portfolio.core_allocations)} High-Conviction Individual Compounders")
         content.append(f"- **Satellite (40%)**: {len(portfolio.satellite_allocations)} Thematic/Macro ETF Engines")
+        content.append("- *Display filter:* only holdings with valid metadata and positive model score are shown in conviction tables.")
         content.append("")
 
         # --- SECTION: TOP CONVICTION (SLEEVE AWARE) ---
@@ -2365,6 +2428,27 @@ class NewsletterGenerator:
             core_allocations = {ticker: alloc for ticker, alloc in portfolio.allocations.items() if ticker in top_stocks}
         if not satellite_allocations:
             satellite_allocations = {ticker: alloc for ticker, alloc in portfolio.allocations.items() if ticker in top_etfs}
+
+        def _is_quality_core_holding(ticker: str) -> bool:
+            meta = top_stocks.get(ticker, {})
+            score = _safe_float(meta.get("score")) or 0.0
+            sector = str(meta.get("sector") or "").strip()
+            return score > 0 and sector and sector.lower() != "unknown"
+
+        def _is_quality_satellite_holding(ticker: str) -> bool:
+            meta = top_etfs.get(ticker, {})
+            score = _safe_float(meta.get("score")) or 0.0
+            theme = str(meta.get("theme") or "").strip()
+            return score > 0 and bool(theme)
+
+        core_allocations = {
+            ticker: alloc for ticker, alloc in core_allocations.items()
+            if _is_quality_core_holding(ticker)
+        }
+        satellite_allocations = {
+            ticker: alloc for ticker, alloc in satellite_allocations.items()
+            if _is_quality_satellite_holding(ticker)
+        }
 
         core_sorted = sorted(core_allocations.items(), key=lambda x: x[1], reverse=True)
         satellite_sorted = sorted(satellite_allocations.items(), key=lambda x: x[1], reverse=True)
