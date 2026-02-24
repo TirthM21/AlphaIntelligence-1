@@ -651,22 +651,29 @@ class FMPFetcher:
         return results
 
     def fetch_market_news(self, limit: int = 10) -> List[Dict]:
-        """Fetch general market news."""
-        # Cache for 1 hour only as news is standard
+        """Fetch general market news (stable endpoint first, legacy fallback)."""
         cache_path = self.cache_dir / "market_news.pkl"
-        
+
         if self._is_cache_valid(cache_path, hours=1):
-             with open(cache_path, 'rb') as f:
+            with open(cache_path, 'rb') as f:
                 return pickle.load(f)
-                
-        # https://financialmodelingprep.com/api/v3/stock_news?limit=10 (for general stock news) 
-        # or fmp/general_news if available, but stock_news without ticker is broad
-        
-        data = self._fetch("stock_news", {'limit': limit})
+
+        endpoint_candidates = [
+            ("news/general-latest", {'limit': limit}),
+            ("news/stock-latest", {'limit': limit}),
+            ("stock_news", {'limit': limit}),
+        ]
+        data: Optional[List[Dict]] = None
+        for endpoint, params in endpoint_candidates:
+            fetched = self._fetch(endpoint, params)
+            if isinstance(fetched, list) and fetched:
+                data = fetched
+                break
+
         if data:
-             with open(cache_path, 'wb') as f:
+            with open(cache_path, 'wb') as f:
                 pickle.dump(data, f)
-        
+
         return data or []
 
     def fetch_sector_performance(self) -> List[Dict]:
@@ -684,7 +691,7 @@ class FMPFetcher:
         return data or []
 
     def fetch_economic_calendar(self, days_forward: int = 7) -> List[Dict]:
-        """Fetch upcoming economic events."""
+        """Fetch upcoming economic events using stable endpoint variants + fallback."""
         cache_path = self.cache_dir / "econ_calendar.pkl"
         if self._is_cache_valid(cache_path, hours=4):
             with open(cache_path, 'rb') as f:
@@ -693,37 +700,38 @@ class FMPFetcher:
         from datetime import date
         today = date.today()
         future = today + timedelta(days=days_forward)
-        
-        # v3 endpoint
         params = {
             'from': today.strftime('%Y-%m-%d'),
             'to': future.strftime('%Y-%m-%d')
         }
-        data = self._fetch("economic_calendar", params)
+
+        endpoint_candidates = ["economic-calendar", "economic_calendar"]
+        data: Optional[List[Dict]] = None
+        for endpoint in endpoint_candidates:
+            fetched = self._fetch(endpoint, params)
+            if isinstance(fetched, list) and fetched:
+                data = fetched
+                break
+
         if data:
             with open(cache_path, 'wb') as f:
                 pickle.dump(data, f)
         return data or []
 
     def fetch_stock_news(self, tickers: List[str], limit: int = 5) -> List[Dict]:
-        """Fetch news for specific stock tickers.
-        
-        Args:
-            tickers: List of stock symbols
-            limit: Number of news items per ticker
-            
-        Returns:
-            List of news items
-        """
+        """Fetch news for specific stock tickers with stable endpoint-first fallback."""
         if not tickers:
             return []
-            
-        # No caching for specific ticker news to keep it fresh
-        params = {
-            "tickers": ",".join(tickers),
-            "limit": limit
-        }
-        return self._fetch("stock_news", params) or []
+
+        params_candidates = [
+            ("news/stock", {"symbols": ",".join(tickers), "limit": limit}),
+            ("stock_news", {"tickers": ",".join(tickers), "limit": limit}),
+        ]
+        for endpoint, params in params_candidates:
+            data = self._fetch(endpoint, params)
+            if isinstance(data, list) and data:
+                return data
+        return []
 
     def fetch_comprehensive_fundamentals(self, ticker: str, include_advanced: bool = True) -> Dict:
         """Fetch comprehensive quarterly fundamentals + optional advanced metrics.
