@@ -24,6 +24,22 @@ from .visualizer import ChartArtifact, MarketVisualizer
 logger = logging.getLogger(__name__)
 
 
+def _json_safe(value: Any) -> Any:
+    """Normalize non-primitive scalars before JSON serialization."""
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    if hasattr(value, "item"):
+        try:
+            return _json_safe(value.item())
+        except Exception:
+            pass
+    if isinstance(value, Path):
+        return str(value)
+    return value
+
+
 @dataclass
 class SectionQCReport:
     section_title: str
@@ -192,7 +208,7 @@ class NewsletterGenerator:
         try:
             self.newsletter_state_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.newsletter_state_path, 'w', encoding='utf-8') as f:
-                json.dump(state, f, indent=2)
+                json.dump(_json_safe(state), f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to persist newsletter state: {e}")
 
