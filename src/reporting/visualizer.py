@@ -57,16 +57,6 @@ class MarketVisualizer:
         stamp = datetime.now().strftime("%Y%m%d")
         return self.output_dir / f"{stamp}_{chart_name}.png"
 
-    def _polish_axes(self, ax, *, grid_axis: str = "y") -> None:
-        """Apply consistent readability improvements across charts."""
-        if grid_axis in {"x", "both"}:
-            ax.grid(axis="x", color=self.style.palette["grid"], **self.style.grid_style)
-        if grid_axis in {"y", "both"}:
-            ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
-        ax.tick_params(axis="both", which="major", pad=6)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-
     def generate_default_charts(
         self,
         index_perf: Dict[str, float],
@@ -78,24 +68,13 @@ class MarketVisualizer:
         """Build the default chart suite for each newsletter run."""
         artifacts: List[ChartArtifact] = []
 
-        decline_vs_return_path = self.generate_sp500_decline_vs_return_chart()
-        if decline_vs_return_path:
-            artifacts.append(
-                ChartArtifact(
-                    key="sp500_decline_vs_return",
-                    title="S&P 500 Intra-Year Declines vs Calendar-Year Returns",
-                    caption="Figure 1. Annual returns (bars) versus maximum intra-year drawdowns (red dots) since 1980.",
-                    path=decline_vs_return_path,
-                )
-            )
-
         breadth_path = self.generate_market_breadth_snapshot(index_perf=index_perf, market_status=market_status)
         if breadth_path:
             artifacts.append(
                 ChartArtifact(
                     key="market_breadth_snapshot",
                     title="Market Breadth & Index Performance Snapshot",
-                    caption="Figure 2. Breadth metrics and benchmark index moves for the latest session.",
+                    caption="Figure 1. Breadth metrics and benchmark index moves for the latest session.",
                     path=breadth_path,
                 )
             )
@@ -106,7 +85,7 @@ class MarketVisualizer:
                 ChartArtifact(
                     key="sector_leadership",
                     title="Sector Leadership",
-                    caption="Figure 3. Ranked sector leadership based on daily percentage performance.",
+                    caption="Figure 2. Ranked sector leadership based on daily percentage performance.",
                     path=sector_path,
                 )
             )
@@ -117,7 +96,7 @@ class MarketVisualizer:
                 ChartArtifact(
                     key="seasonality_context",
                     title="Seasonality Context (Current Month vs Other Months)",
-                    caption="Figure 4. Average monthly return context for SPY over the last 10 years.",
+                    caption="Figure 3. Average monthly return context for SPY over the last 10 years.",
                     path=context_path,
                 )
             )
@@ -128,7 +107,7 @@ class MarketVisualizer:
                 ChartArtifact(
                     key="market_cap_leadership",
                     title="Market-Cap Leadership",
-                    caption="Figure 5. Large/Mid/Small-cap leadership for the current session.",
+                    caption="Figure 4. Large/Mid/Small-cap leadership for the current session.",
                     path=cap_path,
                 )
             )
@@ -139,91 +118,12 @@ class MarketVisualizer:
                 ChartArtifact(
                     key="notable_movers",
                     title="Best & Worst Movers",
-                    caption="Figure 6. Top absolute movers from the daily flow monitor.",
+                    caption="Figure 5. Top absolute movers from the daily flow monitor.",
                     path=movers_path,
                 )
             )
 
         return artifacts
-
-    def generate_sp500_decline_vs_return_chart(self) -> str:
-        """Create a dense annual bar/drawdown chart inspired by institutional market notes."""
-        try:
-            hist = yf.download("^GSPC", start="1980-01-01", auto_adjust=True, progress=False)
-        except Exception:
-            return ""
-        if hist.empty or "Close" not in hist.columns:
-            return ""
-
-        close = hist["Close"].dropna()
-        yearly_rows = []
-        for year, series in close.groupby(close.index.year):
-            if len(series) < 5:
-                continue
-            annual_return = (series.iloc[-1] / series.iloc[0] - 1.0) * 100.0
-            rolling_peak = series.cummax()
-            drawdown = ((series / rolling_peak) - 1.0) * 100.0
-            max_decline = float(drawdown.min())
-            yearly_rows.append((year, annual_return, max_decline))
-
-        if not yearly_rows:
-            return ""
-
-        df = pd.DataFrame(yearly_rows, columns=["year", "annual_return", "max_decline"])
-        years = df["year"].astype(int).tolist()
-        x = list(range(len(df)))
-        annual = df["annual_return"].tolist()
-        declines = df["max_decline"].tolist()
-
-        fig, ax = plt.subplots(figsize=(14.5, 7.4))
-        fig.patch.set_facecolor("#e6e6e6")
-        ax.set_facecolor("#e6e6e6")
-
-        bars = ax.bar(x, annual, color="#595f63", width=0.72, alpha=0.95, zorder=2)
-        ax.scatter(x, declines, color="#c81e1e", s=28, zorder=3, edgecolors="white", linewidth=0.5)
-
-        ax.axhline(0, color="#242424", linewidth=1.1, zorder=1)
-        ax.set_ylim(-60, max(42, max(annual) + 5))
-        self._polish_axes(ax, grid_axis="y")
-
-        for idx, value in enumerate(annual):
-            ax.text(
-                idx,
-                value + (1.2 if value >= 0 else -2.0),
-                f"{value:.0f}%",
-                ha="center",
-                va="bottom" if value >= 0 else "top",
-                fontsize=8,
-                color="#3f3f3f",
-                fontweight="bold",
-            )
-        for idx, value in enumerate(declines):
-            ax.text(idx, value - 1.3, f"{value:.0f}%", ha="center", va="top", fontsize=8, color="#c81e1e", fontweight="bold")
-
-        tick_idx = [i for i, y in enumerate(years) if y % 5 == 0 or i == len(years) - 1]
-        ax.set_xticks(tick_idx)
-        ax.set_xticklabels([f"'{str(years[i])[-2:]}" for i in tick_idx])
-        ax.set_yticks([-60, -40, -20, 0, 20, 40])
-        ax.set_yticklabels([f"{t:.0f}%" for t in [-60, -40, -20, 0, 20, 40]])
-
-        avg_decline = abs(df["max_decline"].mean())
-        positive_years = int((df["annual_return"] > 0).sum())
-        total_years = len(df)
-        ax.set_title("S&P 500 intra-year declines vs. calendar year returns", loc="left", fontsize=16, pad=12, fontweight="bold")
-        ax.text(
-            0.0,
-            1.02,
-            f"Despite average intra-year drops of {avg_decline:.1f}%, annual returns were positive in {positive_years} of {total_years} years",
-            transform=ax.transAxes,
-            fontsize=11,
-            color="#1f2937",
-        )
-
-        fig.tight_layout()
-        output_path = self._build_chart_path("sp500_decline_vs_return")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
-        plt.close(fig)
-        return str(output_path)
 
     def generate_market_cap_leadership_chart(self, cap_perf: Dict[str, float]) -> str:
         if not cap_perf:
@@ -236,7 +136,7 @@ class MarketVisualizer:
         fig, ax = plt.subplots(figsize=(8, 4.6))
         bars = ax.bar(labels, values, color=colors, alpha=0.9)
         ax.axhline(0, color=self.style.palette["grid"], linewidth=1)
-        self._polish_axes(ax, grid_axis="y")
+        ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
         ax.set_title("Market-Cap Leadership")
         ax.set_ylabel("Return %")
 
@@ -246,7 +146,7 @@ class MarketVisualizer:
 
         fig.tight_layout()
         output_path = self._build_chart_path("market_cap_leadership")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
 
@@ -273,14 +173,12 @@ class MarketVisualizer:
         values = [x[1] for x in ranked]
         colors = [self.style.palette["positive"] if v >= 0 else self.style.palette["negative"] for v in values]
 
-        fig, ax = plt.subplots(figsize=(11, 5.4))
+        fig, ax = plt.subplots(figsize=(10, 4.8))
         bars = ax.bar(labels, values, color=colors, alpha=0.9)
         ax.axhline(0, color=self.style.palette["grid"], linewidth=1)
-        self._polish_axes(ax, grid_axis="y")
+        ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
         ax.set_title("Best & Worst Movers (Absolute % Move)")
         ax.set_ylabel("Change %")
-        if len(labels) > 6:
-            plt.setp(ax.get_xticklabels(), rotation=20, ha="right")
 
         for idx, bar in enumerate(bars):
             value = values[idx]
@@ -288,7 +186,7 @@ class MarketVisualizer:
 
         fig.tight_layout()
         output_path = self._build_chart_path("best_worst_movers")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
 
@@ -301,7 +199,7 @@ class MarketVisualizer:
         ad_ratio = float(breadth.get("advance_decline_ratio") or 0)
         pct_above_200 = float(breadth.get("percent_above_200sma") or 0)
 
-        fig, axes = plt.subplots(1, 2, figsize=(13, 5.2))
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
         fig.patch.set_facecolor(self.style.palette["background"])
 
         index_names = list(index_perf.keys())
@@ -311,7 +209,7 @@ class MarketVisualizer:
         axes[0].axhline(0, color=self.style.palette["grid"], linewidth=1)
         axes[0].set_title("Index Performance (%)")
         axes[0].set_ylabel("Daily Return %")
-        self._polish_axes(axes[0], grid_axis="y")
+        axes[0].grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
         for idx, value in enumerate(index_values):
             axes[0].text(idx, value + (0.08 if value >= 0 else -0.18), f"{value:+.2f}%", ha="center", fontsize=9)
 
@@ -320,7 +218,7 @@ class MarketVisualizer:
         metric_colors = [self.style.palette["accent"], self.style.palette["highlight"]]
         axes[1].bar(metric_names, metric_values, color=metric_colors, alpha=0.85)
         axes[1].set_title("Breadth Readings")
-        self._polish_axes(axes[1], grid_axis="y")
+        axes[1].grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
         for idx, value in enumerate(metric_values):
             suffix = "" if idx == 0 else "%"
             axes[1].text(idx, value + (0.5 if value >= 0 else -0.5), f"{value:.1f}{suffix}", ha="center", fontsize=9)
@@ -328,7 +226,7 @@ class MarketVisualizer:
         fig.suptitle("Market Breadth / Index Snapshot", fontsize=self.style.title_size + 1, y=1.02)
         fig.tight_layout()
         output_path = self._build_chart_path("market_breadth_snapshot")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
 
@@ -351,11 +249,11 @@ class MarketVisualizer:
         if df.empty:
             return ""
 
-        fig, ax = plt.subplots(figsize=(11.5, 6.8))
+        fig, ax = plt.subplots(figsize=(10, 6))
         colors = [self.style.palette["positive"] if v >= 0 else self.style.palette["negative"] for v in df["change"]]
         bars = ax.barh(df["sector"], df["change"], color=colors, alpha=0.9)
         ax.axvline(0, color=self.style.palette["grid"], linewidth=1)
-        self._polish_axes(ax, grid_axis="x")
+        ax.grid(axis="x", color=self.style.palette["grid"], **self.style.grid_style)
         ax.set_title("Sector Leadership (Ranked Daily Move)")
         ax.set_xlabel("Return %")
 
@@ -366,7 +264,7 @@ class MarketVisualizer:
 
         fig.tight_layout()
         output_path = self._build_chart_path("sector_leadership")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
 
@@ -394,10 +292,10 @@ class MarketVisualizer:
         if current_idx is not None:
             colors[current_idx] = self.style.palette["highlight"]
 
-        fig, ax = plt.subplots(figsize=(12, 5.4))
+        fig, ax = plt.subplots(figsize=(11, 4.8))
         bars = ax.bar(labels, values, color=colors, alpha=0.9)
         ax.axhline(0, color=self.style.palette["grid"], linewidth=1)
-        self._polish_axes(ax, grid_axis="y")
+        ax.grid(axis="y", color=self.style.palette["grid"], **self.style.grid_style)
         ax.set_title(f"{ticker} Monthly Seasonality (10Y Avg Return)")
         ax.set_ylabel("Avg Monthly Return %")
 
@@ -417,7 +315,7 @@ class MarketVisualizer:
 
         fig.tight_layout()
         output_path = self._build_chart_path("seasonality_context")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
 
@@ -426,7 +324,7 @@ class MarketVisualizer:
         if price_data.empty:
             return ""
 
-        fig, ax = plt.subplots(figsize=(12, 5.8))
+        fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(price_data.index, price_data["Close"], color=self.style.palette["accent"], linewidth=1.6, label="Price")
 
         if "SMA_50" in price_data.columns:
@@ -435,7 +333,7 @@ class MarketVisualizer:
             ax.plot(price_data.index, price_data["SMA_200"], color=self.style.palette["highlight"], alpha=0.7, label="200 SMA")
 
         ax.set_title(f"{ticker} Technical Analysis")
-        self._polish_axes(ax, grid_axis="both")
+        ax.grid(True, color=self.style.palette["grid"], **self.style.grid_style)
         ax.legend(frameon=False)
 
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
@@ -443,6 +341,6 @@ class MarketVisualizer:
 
         fig.tight_layout()
         output_path = self._build_chart_path(f"{ticker.lower()}_history")
-        fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
+        fig.savefig(output_path, dpi=140, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)

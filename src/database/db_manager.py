@@ -100,24 +100,6 @@ class DBManager:
             logger.error(f"Database initialization failed: {e}")
             self.db_url = None
 
-    @staticmethod
-    def _to_native_float(value: Optional[float]) -> Optional[float]:
-        """Convert numpy/pandas scalar types into plain Python floats for DB writes."""
-        if value is None:
-            return None
-
-        # numpy scalar values expose `.item()`; convert without importing numpy.
-        if hasattr(value, "item"):
-            try:
-                value = value.item()
-            except Exception:
-                pass
-
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
-
     def add_subscriber(self, email: str, name: Optional[str] = None) -> bool:
         """Add a new newsletter subscriber."""
         if not self.db_url: return False
@@ -183,25 +165,17 @@ class DBManager:
         
         session = self.Session()
         try:
-            normalized_spy_price = self._to_native_float(spy_price)
-            inserted = 0
-            skipped = 0
             for s in signals:
-                price_at_signal = self._to_native_float(s.get('current_price'))
-                if price_at_signal is None:
-                    skipped += 1
-                    continue
                 rec = Recommendation(
                     ticker=s['ticker'],
                     signal_type='BUY' if s.get('is_buy') else 'SELL',
-                    price_at_signal=price_at_signal,
-                    score=self._to_native_float(s.get('score')),
-                    spy_price_at_signal=normalized_spy_price
+                    price_at_signal=s['current_price'],
+                    score=s['score'],
+                    spy_price_at_signal=spy_price
                 )
                 session.add(rec)
-                inserted += 1
             session.commit()
-            logger.info(f"Recorded {inserted} recommendations for tracking (skipped {skipped}).")
+            logger.info(f"Recorded {len(signals)} recommendations for tracking.")
         except Exception as e:
             logger.error(f"Failed to record recommendations: {e}")
             session.rollback()
@@ -244,18 +218,13 @@ class DBManager:
                 logger.debug(f"Position already open for {ticker} ({strategy})")
                 return False
             
-            normalized_entry_price = self._to_native_float(entry_price)
-            if normalized_entry_price is None:
-                logger.error(f"Invalid entry_price for {ticker}: {entry_price}")
-                return False
-
             pos = Position(
                 ticker=ticker,
-                entry_price=normalized_entry_price,
-                stop_loss=self._to_native_float(stop_loss),
-                signal_score=self._to_native_float(signal_score),
+                entry_price=entry_price,
+                stop_loss=stop_loss,
+                signal_score=signal_score,
                 strategy=strategy,
-                spy_entry_price=self._to_native_float(spy_price)
+                spy_entry_price=spy_price
             )
             session.add(pos)
             session.commit()
@@ -282,30 +251,25 @@ class DBManager:
                 logger.debug(f"No open position for {ticker} ({strategy})")
                 return None
             
-            normalized_exit_price = self._to_native_float(exit_price)
-            pos.exit_price = normalized_exit_price
+            pos.exit_price = exit_price
             pos.exit_date = datetime.utcnow()
             pos.status = 'CLOSED'
             pos.exit_reason = exit_reason
-            pos.spy_exit_price = self._to_native_float(spy_price)
-            if normalized_exit_price is not None and pos.entry_price:
-                pos.pnl_pct = ((normalized_exit_price - pos.entry_price) / pos.entry_price) * 100
-            else:
-                pos.pnl_pct = None
+            pos.spy_exit_price = spy_price
+            pos.pnl_pct = ((exit_price - pos.entry_price) / pos.entry_price) * 100
             
             session.commit()
             
             result = {
                 'ticker': ticker,
                 'entry_price': pos.entry_price,
-                'exit_price': normalized_exit_price,
+                'exit_price': exit_price,
                 'pnl_pct': pos.pnl_pct,
                 'exit_reason': exit_reason,
                 'hold_days': (pos.exit_date - pos.entry_date).days
             }
-            pnl_display = f"{pos.pnl_pct:+.1f}%" if pos.pnl_pct is not None else "N/A"
-            emoji = '💰' if (pos.pnl_pct is not None and pos.pnl_pct > 0) else '📉'
-            logger.info(f"{emoji} Closed {strategy} position: {ticker} | P&L: {pnl_display} | Reason: {exit_reason}")
+            emoji = '💰' if pos.pnl_pct > 0 else '📉'
+            logger.info(f"{emoji} Closed {strategy} position: {ticker} | P&L: {pos.pnl_pct:+.1f}% | Reason: {exit_reason}")
             return result
         except Exception as e:
             logger.error(f"Failed to close position for {ticker}: {e}")

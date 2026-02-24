@@ -13,7 +13,6 @@ class ChartStyleConfig:
     title_size: int
     label_size: int
     tick_size: int
-    dpi: int
     grid_style: Dict[str, object]
     axis_format: Dict[str, object]
     annotation_style: Dict[str, object]
@@ -33,10 +32,9 @@ LIGHT_CHART_STYLE = ChartStyleConfig(
         "highlight": "#7c3aed",
     },
     font_family="DejaVu Sans",
-    title_size=15,
-    label_size=12,
-    tick_size=10,
-    dpi=180,
+    title_size=14,
+    label_size=11,
+    tick_size=9,
     grid_style={"linestyle": "--", "linewidth": 0.8, "alpha": 0.45},
     axis_format={"percent_decimals": 1, "date_format": "%b %Y"},
     annotation_style={
