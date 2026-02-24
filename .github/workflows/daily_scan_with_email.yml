@@ -1,9 +1,9 @@
 name: Daily Market Scan & Newsletter
 
 on:
-  # Run each US-market day overnight (10:30 UTC ~= 5:30/6:30 AM ET depending on DST)
+  # Run every day at 8:00 AM IST (2:30 AM UTC)
   schedule:
-    - cron: '30 10 * * 1-5'  # Weekdays at 10:30 AM UTC
+    - cron: '30 2 * * *'  # Daily at 2:30 AM UTC (8:00 AM IST)
   
   # Allow manual trigger
   workflow_dispatch:
