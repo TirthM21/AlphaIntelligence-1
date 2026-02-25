@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 HARDCODED_MODEL_KEYS = {
     'qwen/qwen3.5-397b-a17b': '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',
     'openai/gpt-oss-120b': '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',
+    'z-ai/glm4.7': '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',
     'z-ai/glm5': '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',
     'deepseek-ai/deepseek-v3.2': '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',
 }
@@ -32,13 +33,14 @@ class AIAgent:
         self.supported_models = [
             'qwen/qwen3.5-397b-a17b',
             'openai/gpt-oss-120b',
+            'z-ai/glm4.7',
             'z-ai/glm5',
             'deepseek-ai/deepseek-v3.2',
         ]
-        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[2])
+        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[3])
         if self.model not in self.supported_models:
-            logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[2])
-            self.model = self.supported_models[2]
+            logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[3])
+            self.model = self.supported_models[3]
 
         self.api_key = (
             api_key
@@ -46,7 +48,7 @@ class AIAgent:
             or os.getenv('NVAPI_KEY')
             or os.getenv('OPENAI_API_KEY')
             or HARDCODED_MODEL_KEYS.get(self.model)
-            or HARDCODED_MODEL_KEYS[self.supported_models[2]]
+            or HARDCODED_MODEL_KEYS[self.supported_models[3]]
         )
 
         try:
