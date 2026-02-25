@@ -4,6 +4,7 @@ import logging
 import os
 import json
 import re
+import time
 from typing import Dict, List, Optional
 
 from openai import OpenAI
@@ -49,14 +50,77 @@ class AIAgent:
         )
 
         try:
+            self.request_timeout_seconds = float(os.getenv("NVIDIA_AI_TIMEOUT_SECONDS", "45"))
+        except (TypeError, ValueError):
+            self.request_timeout_seconds = 45.0
+
+        try:
+            self.max_retries = int(os.getenv("NVIDIA_AI_MAX_RETRIES", "1"))
+        except (TypeError, ValueError):
+            self.max_retries = 1
+
+        try:
+            self.max_tokens = int(os.getenv("NVIDIA_AI_MAX_TOKENS", "2500"))
+        except (TypeError, ValueError):
+            self.max_tokens = 2500
+
+        try:
+            self.failure_threshold = max(1, int(os.getenv("NVIDIA_AI_FAILURE_THRESHOLD", "2")))
+        except (TypeError, ValueError):
+            self.failure_threshold = 2
+
+        try:
+            self.cooldown_seconds = max(0, int(os.getenv("NVIDIA_AI_COOLDOWN_SECONDS", "900")))
+        except (TypeError, ValueError):
+            self.cooldown_seconds = 900
+
+        self._consecutive_failures = 0
+        self._cooldown_until = 0.0
+
+        try:
             self.client = OpenAI(
                 base_url=self.base_url,
-                api_key=self.api_key
+                api_key=self.api_key,
+                max_retries=self.max_retries,
+                timeout=self.request_timeout_seconds,
             )
-            logger.info(f"AIAgent initialized using NVIDIA model={self.model}")
+            logger.info(
+                "AIAgent initialized using NVIDIA model=%s timeout=%ss max_retries=%s max_tokens=%s",
+                self.model,
+                self.request_timeout_seconds,
+                self.max_retries,
+                self.max_tokens,
+            )
         except Exception as e:
             logger.error(f"Failed to initialize AI client: {e}")
             self.client = None
+
+    def _is_in_cooldown(self) -> bool:
+        """Return True when AI calls should be skipped due to repeated provider failures."""
+        if self._cooldown_until <= 0:
+            return False
+        if time.time() < self._cooldown_until:
+            remaining = int(self._cooldown_until - time.time())
+            logger.warning("AI cooldown active for %ss; skipping provider call", max(remaining, 1))
+            return True
+        self._cooldown_until = 0.0
+        return False
+
+    def _record_ai_failure(self):
+        """Track failures and activate temporary cooldown after threshold breaches."""
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= self.failure_threshold and self.cooldown_seconds > 0:
+            self._cooldown_until = time.time() + self.cooldown_seconds
+            logger.warning(
+                "AI provider failure threshold reached (%s); enabling cooldown for %ss",
+                self._consecutive_failures,
+                self.cooldown_seconds,
+            )
+
+    def _record_ai_success(self):
+        """Reset transient AI failure state after a successful call."""
+        self._consecutive_failures = 0
+        self._cooldown_until = 0.0
 
     def _sanitize_data(self, data: any) -> any:
         """Recursively convert non-serializable objects (like pd.Timestamp) to strings."""
@@ -503,21 +567,30 @@ class AIAgent:
         """Call NVIDIA API with an explicitly selected model/key pair."""
         if not api_key:
             return None
+        if self._is_in_cooldown():
+            return None
         try:
-            client = OpenAI(base_url=self.base_url, api_key=api_key)
+            client = OpenAI(
+                base_url=self.base_url,
+                api_key=api_key,
+                max_retries=self.max_retries,
+                timeout=self.request_timeout_seconds,
+            )
             completion = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature if temperature is not None else (0.1 if low_temp else 1.0),
                 top_p=0.95,
-                max_tokens=8192,
+                max_tokens=self.max_tokens,
                 extra_body={"chat_template_kwargs": {"thinking": True}},
                 stream=False,
             )
             if not completion.choices:
+                self._record_ai_failure()
                 return None
             content = completion.choices[0].message.content
             if isinstance(content, str):
+                self._record_ai_success()
                 return content.strip()
             if isinstance(content, list):
                 text_parts = []
@@ -527,9 +600,15 @@ class AIAgent:
                         if isinstance(text_val, str):
                             text_parts.append(text_val)
                 joined = "".join(text_parts).strip()
+                if joined:
+                    self._record_ai_success()
+                else:
+                    self._record_ai_failure()
                 return joined or None
+            self._record_ai_failure()
             return None
         except Exception as e:
+            self._record_ai_failure()
             logger.error("AI API call failed for model %s: %s", model, e)
             return None
 
