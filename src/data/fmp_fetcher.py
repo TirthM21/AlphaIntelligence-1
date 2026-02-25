@@ -596,10 +596,12 @@ class FMPFetcher:
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)
 
-        # Insider trading is v4 endpoint
-        url = "https://financialmodelingprep.com/api/v4/insider-trading"
-        params = {'symbol': ticker, 'page': page}
-        data = self._request_json('api_v4/insider-trading', params=params, timeout=10, full_url=url)
+        # Stable endpoint (search by symbol)
+        params = {'symbol': ticker}
+        if page and page > 0:
+            params['page'] = page
+
+        data = self._fetch('insider-trading/search', params=params)
         if not data:
             return []
 
@@ -933,22 +935,20 @@ class FMPFetcher:
             except Exception:
                 pass
         
-        # Use v3 stock list endpoint
+        # Use stable stock-list endpoint
         params = {}
-        if exchange:
-            params['exchange'] = exchange
-        
+
         try:
-            url = "https://financialmodelingprep.com/api/v3/stock/list"
-            data = self._request_json('api_v3/stock/list', params=params, timeout=30, full_url=url)
+            data = self._request_json('stock-list', params=params, timeout=30)
             if not data:
                 return []
             if not isinstance(data, list):
                 logger.warning("FMP stock list returned unexpected format")
                 return []
-            
-            # Filter to US exchanges only
+
+            # Filter to US exchanges only (and optional caller-provided exchange)
             us_exchanges = {'NASDAQ', 'NYSE', 'AMEX', 'New York Stock Exchange', 'Nasdaq Global Select'}
+            exchange_filter = exchange.upper().strip() if exchange else None
             filtered = [
                 {
                     'symbol': s.get('symbol', ''),
@@ -960,6 +960,7 @@ class FMPFetcher:
                 for s in data
                 if (s.get('exchangeShortName', '') in us_exchanges or 
                     s.get('exchange', '') in us_exchanges)
+                and (not exchange_filter or s.get('exchangeShortName', '').upper() == exchange_filter)
                 and s.get('type', '') == 'stock'
             ]
             
