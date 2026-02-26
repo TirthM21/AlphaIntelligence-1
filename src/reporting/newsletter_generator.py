@@ -18,6 +18,7 @@ from ..data.finnhub_fetcher import FinnhubFetcher
 from ..data.marketaux_fetcher import MarketauxFetcher
 from ..data.fred_fetcher import FredFetcher
 from ..data.price_service import PriceService
+from ..data.provider_health import provider_health
 from ..ai.ai_agent import AIAgent
 from .visualizer import ChartArtifact, MarketVisualizer
 
@@ -151,11 +152,25 @@ class NewsletterGenerator:
             "fmp": {"active": bool(fmp_key), "missing_key": not bool(fmp_key), "key_env": "FMP_API_KEY"},
             "yfinance": {"active": True, "missing_key": False, "key_env": None},
         }
+        health_snapshot = provider_health.snapshot()
+        for name, details in status.items():
+            health = health_snapshot.get(name, {})
+            if health:
+                details["health"] = health
+                if not health.get("available", True):
+                    details["active"] = False
+                    details["unavailable_reason"] = health.get("reason") or "provider_unavailable"
         return status
 
     def _get_runtime_providers(self, section: str) -> List[str]:
         providers = self.provider_matrix.get(section, [])
         return [p for p in providers if self.provider_status.get(p, {}).get("active", False)]
+
+    def _is_provider_healthy(self, provider: str) -> bool:
+        details = self.provider_status.get(provider, {})
+        if not details.get("active", False):
+            return False
+        return provider_health.is_provider_available(provider)
 
     def _log_provider_diagnostics(self) -> None:
         logger.info("Newsletter provider diagnostics at startup:")
@@ -994,6 +1009,9 @@ class NewsletterGenerator:
 
         def _execute_section_plan(plan: SectionDataPlan) -> Any:
             for provider in [plan.primary_provider, plan.fallback_provider]:
+                if not self._is_provider_healthy(provider):
+                    logger.warning("Section %s skipping provider %s due to run health status.", plan.section_name, provider)
+                    continue
                 try:
                     data = plan.fetch_fn(provider)
                     if _has_data(data):
@@ -1024,6 +1042,7 @@ class NewsletterGenerator:
             SectionDataPlan("fundamentals_snippets", "fmp", "finnhub", _fetch_fundamentals_snippets, _diag_renderer, 3, "24h"),
         ]
 
+        self.provider_status = self._build_provider_status()
         section_results: Dict[str, Any] = {}
         for plan in section_plans:
             section_results[plan.section_name] = _execute_section_plan(plan)

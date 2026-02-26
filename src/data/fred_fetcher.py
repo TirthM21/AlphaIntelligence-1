@@ -30,6 +30,7 @@ class FredFetcher:
     """Fetch economic data from FRED."""
 
     _missing_api_key_warned = False
+    _missing_api_key_fetch_warned = False
     _macro_fallback_warned = False
 
     CANONICAL_MACRO_SERIES = {
@@ -95,7 +96,9 @@ class FredFetcher:
             JSON response or None
         """
         if not self.api_key:
-            logger.error("Cannot fetch from FRED without API key")
+            if not FredFetcher._missing_api_key_fetch_warned:
+                logger.warning("Cannot fetch from FRED without API key; suppressing repetitive startup warnings for this run.")
+                FredFetcher._missing_api_key_fetch_warned = True
             return None
 
         ttl_hours = cache_ttl_hours if cache_ttl_hours is not None else self.cache_ttl_hours

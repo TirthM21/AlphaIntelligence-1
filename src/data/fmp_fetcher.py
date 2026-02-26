@@ -25,6 +25,8 @@ import json
 import requests
 from dotenv import load_dotenv
 
+from .provider_health import provider_health
+
 # Load environment variables
 load_dotenv()
 
@@ -177,6 +179,16 @@ class FMPFetcher:
 
         return False
 
+    def _is_endpoint_blocked_for_newsletter(self, endpoint: str, params: Optional[Dict] = None) -> bool:
+        """Check cooldown and provider health before newsletter-driven calls."""
+        if self._is_global_cooldown_active(endpoint):
+            return True
+        if self.is_endpoint_cooldown_active(endpoint):
+            return True
+        if params and self.is_cooldown_active(endpoint, params=params):
+            return True
+        return not provider_health.is_provider_available("fmp")
+
     def _request_json(
         self,
         endpoint: str,
@@ -287,6 +299,7 @@ class FMPFetcher:
                         logger.warning(
                             "FMP global quota exhaustion suspected; setting 30m global cooldown and returning fallback."
                         )
+                        provider_health.mark_unavailable("fmp", reason="global_quota_cooldown")
                         return None
 
                     delay = (2 ** attempt) + random.uniform(0, 0.5)
@@ -453,6 +466,10 @@ class FMPFetcher:
                     return cached_data
             except Exception as e:
                 logger.warning(f"Failed to read cache for {endpoint}: {e}")
+
+        if self._is_global_cooldown_active(endpoint) or self.is_endpoint_cooldown_active(endpoint) or self.is_cooldown_active(endpoint, params=param_dict):
+            logger.warning("FMP cooldown active for %s before cache-miss API fetch; using fallback path.", endpoint)
+            return None
 
         logger.info(f"FMP CACHE MISS: Fetching {endpoint} from API...")
         self.usage_state['cache_misses'] += 1
@@ -660,6 +677,10 @@ class FMPFetcher:
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)
 
+        if self._is_endpoint_blocked_for_newsletter("news/stock-latest"):
+            logger.warning("FMP cooldown active for market news section before fetch; using fallback providers.")
+            return []
+
         endpoint_candidates = [
             ("news/general-latest", {'limit': limit}),
             ("news/stock-latest", {'limit': limit}),
@@ -684,7 +705,11 @@ class FMPFetcher:
         if self._is_cache_valid(cache_path, hours=1):
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)
-        
+
+        if self._is_endpoint_blocked_for_newsletter("sector-performance"):
+            logger.warning("FMP cooldown active for sector performance before fetch; using fallback providers.")
+            return []
+
         # v3 endpoint for sector performance
         data = self._fetch("sector-performance", {})
         if data:
@@ -698,6 +723,10 @@ class FMPFetcher:
         if self._is_cache_valid(cache_path, hours=4):
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)
+
+        if self._is_endpoint_blocked_for_newsletter("economic-calendar"):
+            logger.warning("FMP cooldown active for economic calendar before fetch; using fallback providers.")
+            return []
 
         from datetime import date
         today = date.today()
@@ -723,6 +752,10 @@ class FMPFetcher:
     def fetch_stock_news(self, tickers: List[str], limit: int = 5) -> List[Dict]:
         """Fetch news for specific stock tickers with stable endpoint-first fallback."""
         if not tickers:
+            return []
+
+        if self._is_endpoint_blocked_for_newsletter("news/stock"):
+            logger.warning("FMP cooldown active for stock-news before fetch; using fallback providers.")
             return []
 
         params_candidates = [
