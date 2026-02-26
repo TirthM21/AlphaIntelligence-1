@@ -383,6 +383,53 @@ class DBManager:
             allowed_cols = {c.name for c in FundPerformance.__table__.columns}
             sanitized_data = {k: v for k, v in perf_data.items() if k in allowed_cols and k != 'date'}
 
+            float_cols = {
+                'total_pnl_pct',
+                'win_rate',
+                'avg_gain',
+                'avg_loss',
+                'sharpe_ratio',
+                'max_drawdown',
+                'alpha_vs_spy',
+                'spy_return',
+            }
+            int_cols = {'open_positions', 'closed_positions'}
+            nullable_cols = {
+                c.name for c in FundPerformance.__table__.columns if c.nullable
+            }
+
+            for key in list(sanitized_data.keys()):
+                value = sanitized_data[key]
+
+                # Preserve None for nullable DB columns.
+                if value is None and key in nullable_cols:
+                    continue
+
+                if key in float_cols:
+                    sanitized_data[key] = self._to_native_float(value)
+                    continue
+
+                if key in int_cols:
+                    if value is None and key in nullable_cols:
+                        continue
+                    if hasattr(value, 'item'):
+                        try:
+                            value = value.item()
+                        except Exception:
+                            pass
+                    try:
+                        sanitized_data[key] = int(value)
+                    except (TypeError, ValueError):
+                        sanitized_data[key] = None if key in nullable_cols else 0
+                    continue
+
+                # Defensive conversion pass for any remaining numpy scalar values.
+                if hasattr(value, 'item'):
+                    try:
+                        sanitized_data[key] = value.item()
+                    except Exception:
+                        pass
+
             if existing:
                 # Update existing record
                 for key, val in sanitized_data.items():
