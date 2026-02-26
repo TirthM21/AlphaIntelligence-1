@@ -1699,7 +1699,8 @@ class NewsletterGenerator:
         content.append(f"This content is for informational purposes only. [Unsubscribe](https://alphaintelligence.capital/unsubscribe)")
 
         # 3. Enhance whole newsletter with AI for premium feel
-        final_md = "\n".join(content)
+        baseline_md = "\n".join(content)
+        final_md = baseline_md
         prior_newsletter_md = self._load_prior_newsletter_text(output_path)
         evidence_payload = self._build_evidence_payload(
             market_news=market_news,
@@ -1712,11 +1713,18 @@ class NewsletterGenerator:
         )
         if self.ai_agent.api_key:
             logger.info("Enhancing newsletter prose with AI validation...")
-            final_md = self.ai_agent.enhance_newsletter_with_validation(
-                final_md,
-                evidence_payload=evidence_payload,
-                prior_newsletter_md=prior_newsletter_md,
-            )
+            try:
+                final_md = self.ai_agent.enhance_newsletter_with_validation(
+                    final_md,
+                    evidence_payload=evidence_payload,
+                    prior_newsletter_md=prior_newsletter_md,
+                )
+            except Exception as enhancement_err:
+                logger.warning(
+                    "AI newsletter enhancement failed; reverting to baseline markdown. Error: %s",
+                    enhancement_err,
+                )
+                final_md = baseline_md
 
         final_md, section_qc_reports = self._apply_section_qc_fallbacks(final_md)
 
@@ -1744,16 +1752,24 @@ class NewsletterGenerator:
                 int(qc_report.get("section_qc_failures", 0)),
             )
 
-        diagnostics_lines = ["", "## Internal Diagnostics"]
-        for plan in section_plans:
-            status_row = section_status.get(plan.section_name, {"status": "failed", "provider": "none"})
-            diag_summary = plan.render_fn(section_results.get(plan.section_name))
-            diagnostics_lines.append(
-                f"- **{plan.section_name}**: {status_row['status']} via `{status_row['provider']}` "
-                f"(primary={plan.primary_provider}, fallback={plan.fallback_provider}, "
-                f"max_items={plan.max_items}, sla={plan.freshness_sla}, {diag_summary})"
+        diagnostics_base_md = final_md
+        try:
+            diagnostics_lines = ["", "## Internal Diagnostics"]
+            for plan in section_plans:
+                status_row = section_status.get(plan.section_name, {"status": "failed", "provider": "none"})
+                diag_summary = plan.render_fn(section_results.get(plan.section_name))
+                diagnostics_lines.append(
+                    f"- **{plan.section_name}**: {status_row['status']} via `{status_row['provider']}` "
+                    f"(primary={plan.primary_provider}, fallback={plan.fallback_provider}, "
+                    f"max_items={plan.max_items}, sla={plan.freshness_sla}, {diag_summary})"
+                )
+            final_md = final_md.rstrip() + "\n" + "\n".join(diagnostics_lines) + "\n"
+        except Exception as diagnostics_err:
+            logger.warning(
+                "Failed to serialize diagnostics block; reverting to baseline markdown. Error: %s",
+                diagnostics_err,
             )
-        final_md = final_md.rstrip() + "\n" + "\n".join(diagnostics_lines) + "\n"
+            final_md = diagnostics_base_md
 
         # Save markdown archive file
         output_path_obj = Path(output_path)

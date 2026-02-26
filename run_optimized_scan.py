@@ -83,6 +83,43 @@ def _emit_email_delivery_summary(summary: dict) -> None:
     _write_github_output('email_top_failure_reason', summary['top_failure_reason'])
 
 
+def _write_newsletter_fallback_artifacts(root_cause: str) -> str:
+    """Write degraded-mode newsletter artifacts so downstream freshness checks can proceed."""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    date_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    root_cause_clean = (root_cause or 'unknown_error').strip() or 'unknown_error'
+
+    lines = [
+        '# ⚠️ DEGRADED MODE — DAILY NEWSLETTER FALLBACK',
+        '',
+        f'**Generated:** {date_str}',
+        f'**Root Cause:** `{root_cause_clean}`',
+        '',
+        'The full newsletter pipeline failed during this run. This fallback artifact is intentionally minimal and non-ideal.',
+        'Downstream consumers should treat this as degraded content while freshness remains intact.',
+        '',
+        '## Operational Status',
+        '- Newsletter generation failed and fallback markdown was emitted.',
+        '- Investigate logs for stack trace and upstream dependency health.',
+        '',
+        '## Disclaimer',
+        'This content is for operational continuity only and is not investment advice.',
+        '',
+    ]
+    fallback_md = '\n'.join(lines)
+
+    newsletters_dir = Path('./data/newsletters')
+    newsletters_dir.mkdir(parents=True, exist_ok=True)
+    fallback_path = newsletters_dir / f'daily_newsletter_{timestamp}.md'
+    fallback_path.write_text(fallback_md, encoding='utf-8')
+
+    stable_path = Path('./data/daily_newsletter.md')
+    stable_path.parent.mkdir(parents=True, exist_ok=True)
+    stable_path.write_text(fallback_md, encoding='utf-8')
+
+    return str(fallback_path)
+
+
 def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, output_dir="./data/daily_scans"):
     """Save comprehensive report."""
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -801,7 +838,13 @@ def main():
             print("...\\n(See full file for more)")
             
         except Exception as e:
-            logger.error(f"Failed to generate newsletter: {e}")
+            root_cause = f"{type(e).__name__}: {e}"
+            logger.error(f"Failed to generate newsletter: {root_cause}")
+            try:
+                fallback_newsletter_path = _write_newsletter_fallback_artifacts(root_cause)
+                logger.warning(f"Wrote degraded-mode fallback newsletter artifacts: {fallback_newsletter_path}")
+            except Exception as fallback_err:
+                logger.error(f"Failed to write degraded-mode fallback newsletter artifacts: {fallback_err}")
 
         # NEW: Generate AI Deep-Dive Intelligence Report
         try:
