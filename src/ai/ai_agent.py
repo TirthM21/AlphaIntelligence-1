@@ -12,14 +12,13 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# User-requested fallback credentials (used only when env/api_key is absent).
-# NOTE: Keeping keys in source control is not recommended for production systems.
-HARDCODED_MODEL_KEYS = {
-    'qwen/qwen3.5-397b-a17b': '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',
-    'openai/gpt-oss-120b': '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',
-    'z-ai/glm4.7': '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',
-    'z-ai/glm5': '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',
-    'deepseek-ai/deepseek-v3.2': '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',
+# Optional model-specific API keys can be configured through env vars.
+MODEL_KEY_ENV_MAP = {
+    'qwen/qwen3.5-397b-a17b': 'NVIDIA_API_KEY_QWEN',
+    'openai/gpt-oss-120b': 'NVIDIA_API_KEY_GPT_OSS',
+    'z-ai/glm4.7': 'NVIDIA_API_KEY_GLM47',
+    'z-ai/glm5': 'NVIDIA_API_KEY_GLM5',
+    'deepseek-ai/deepseek-v3.2': 'NVIDIA_API_KEY_DEEPSEEK',
 }
 
 class AIAgent:
@@ -44,11 +43,11 @@ class AIAgent:
 
         self.api_key = (
             api_key
+            or os.getenv('FREE_LLM_API_KEY')
             or os.getenv('NVIDIA_API_KEY')
             or os.getenv('NVAPI_KEY')
             or os.getenv('OPENAI_API_KEY')
-            or HARDCODED_MODEL_KEYS.get(self.model)
-            or HARDCODED_MODEL_KEYS[self.supported_models[3]]
+            or os.getenv(MODEL_KEY_ENV_MAP.get(self.model, ''))
         )
 
         try:
@@ -537,7 +536,7 @@ class AIAgent:
 
         for idx, (section_name, payload) in enumerate(section_payloads.items()):
             model = self.supported_models[idx % len(self.supported_models)]
-            model_key = HARDCODED_MODEL_KEYS.get(model) or self.api_key
+            model_key = os.getenv(MODEL_KEY_ENV_MAP.get(model, '')) or self.api_key
             context = payload.get('context') or {}
             instruction = payload.get('instruction') or 'Write 2 concise institutional bullets.'
             fallback = payload.get('fallback') or '- Keep positioning balanced and data-driven.'
