@@ -18,6 +18,8 @@ import pickle
 import requests
 from dotenv import load_dotenv
 
+from .provider_health import provider_health
+
 # Load environment variables
 load_dotenv()
 
@@ -41,16 +43,37 @@ class FinnhubFetcher:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
         self.session = requests.Session()
+        self._news_sentiment_403_streak = 0
 
     def _safe_get(self, endpoint: str, params: Dict, timeout: int = 10) -> Dict:
         """Perform a Finnhub GET and return parsed JSON dict/list wrapper."""
         if not self.api_key:
             return {}
+        endpoint_key = (endpoint or "").strip().lower()
+        if not provider_health.is_endpoint_available("finnhub", endpoint_key):
+            logger.warning("Finnhub endpoint %s marked unavailable for this run; skipping call.", endpoint)
+            return {}
         try:
             query = {**params, "token": self.api_key}
             response = self.session.get(f"{self.base_url}/{endpoint}", params=query, timeout=timeout)
-            response.raise_for_status()
+            if response.status_code == 403:
+                if endpoint_key == "news-sentiment":
+                    self._news_sentiment_403_streak += 1
+                    if self._news_sentiment_403_streak >= 2:
+                        provider_health.mark_unavailable(
+                            "finnhub",
+                            endpoint=endpoint_key,
+                            reason="repeated_403_news_sentiment",
+                        )
+                        logger.warning(
+                            "Finnhub %s returned repeated 403 responses; marking endpoint unavailable for this run.",
+                            endpoint,
+                        )
+                response.raise_for_status()
+
             payload = response.json()
+            if endpoint_key == "news-sentiment":
+                self._news_sentiment_403_streak = 0
             if isinstance(payload, dict):
                 return payload
             if isinstance(payload, list):
@@ -623,6 +646,9 @@ class FinnhubFetcher:
         if self._is_cache_valid(cache_path, hours=2):
             with open(cache_path, "rb") as f:
                 return pickle.load(f)
+
+        if not provider_health.is_endpoint_available("finnhub", "news-sentiment"):
+            return {}
 
         payload = self._safe_get("news-sentiment", {"symbol": symbol})
         if not payload:
