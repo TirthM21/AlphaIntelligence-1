@@ -471,7 +471,7 @@ from src.data.price_service import PriceService
 
             current_price = price_service.get_current_price(ticker)
             if current_price is None or current_price <= 0:
-                logger.warning(f"Invalid current yfinance price for {ticker}")
+                logger.info(f"Current yfinance price unavailable for {ticker}; skipping for this cycle")
                 continue
 
             # Calculate RSI

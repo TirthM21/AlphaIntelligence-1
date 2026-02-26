@@ -44,7 +44,7 @@ class PerformanceTracker:
                 if attempt < 2:
                     time.sleep(1)
             if self._spy_price is None:
-                logger.warning("Could not fetch SPY price after 3 attempts")
+                logger.info("SPY price unavailable after 3 attempts; continuing with benchmark=0.0")
                 self._spy_price = 0.0
         return self._spy_price or 0.0
 
