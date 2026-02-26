@@ -190,7 +190,10 @@ class NewsletterGenerator:
             return 0.0
 
         price = self.price_service.get_current_price(ticker)
-        return float(price) if price and price > 0 else 0.0
+        if not price or price <= 0:
+            logger.info("Newsletter price unavailable for %s; rendering with fallback value", ticker)
+            return 0.0
+        return float(price)
 
     def _load_newsletter_state(self) -> Dict:
         if not self.newsletter_state_path.exists():
