@@ -158,36 +158,8 @@ jobs:
             data/daily_newsletter.md
             data/daily_newsletter.html
             data/newsletters/daily_newsletter_*.md
-            data/reports/kalman_filter_report_*.md
-            data/reports/kalman_filter_report_latest.md
             logs/daily_newsletter.log
           retention-days: 30
-
-      - name: 📉 Generate Kalman Filter Report + Email
-        if: success()
-        env:
-          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER || secrets.EMAIL_FROM }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT || secrets.EMAIL_TO }}
-          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER || 'smtp.gmail.com' }}
-          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT || '587' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
-          MARKETAUX_API_KEY: ${{ secrets.MARKETAUX_API_KEY }}
-          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
-        run: |
-          echo "🚀 Running Kalman filter report workflow action..."
-          KALMAN_STARTED_AT="$(date -u +'%Y-%m-%d %H:%M:%S')"
-          python run_kalman_report.py --send-email
-
-          if ! find data/reports -maxdepth 1 -type f -name 'kalman_filter_report_*.md' -newermt "$KALMAN_STARTED_AT" | grep -q .; then
-            echo "::error::No fresh Kalman report generated in data/reports/kalman_filter_report_*.md"
-            exit 1
-          fi
-
-          KALMAN_ARTIFACT_PATH="$(find data/reports -maxdepth 1 -type f -name 'kalman_filter_report_*.md' -newermt "$KALMAN_STARTED_AT" | sort | tail -n 1)"
-          echo "KALMAN_ARTIFACT_PATH=${KALMAN_ARTIFACT_PATH}" >> "$GITHUB_ENV"
-          echo "✅ Kalman report ready: ${KALMAN_ARTIFACT_PATH}"
       
       - name: 💾 Commit Results to Repository
         if: success()
