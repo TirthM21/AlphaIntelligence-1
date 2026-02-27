@@ -46,9 +46,10 @@ echo        - Workers: 3
 echo        - Delay: 0.5s
 echo        - FMP Enhanced Fundamentals: Enabled
 echo        - SEC Filing Downloads: Enabled
+echo        - Newsletter Email: Enabled
 echo.
 
-python run_optimized_scan.py --workers 3 --delay 0.5 --use-fmp --download-sec
+python run_optimized_scan.py --workers 3 --delay 0.5 --use-fmp --download-sec --send-email
 
 if %errorlevel% neq 0 (
     echo.
