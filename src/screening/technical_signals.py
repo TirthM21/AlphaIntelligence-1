@@ -134,6 +134,19 @@ class TechnicalScanner:
             return abs(val1 - val2) / val1 < tolerance
         return False
 
+    def _pattern_regime_bias(self, window: int = 40) -> float:
+        """Return simple trend bias over recent window.
+
+        > 0 implies bullish bias, < 0 implies bearish bias.
+        """
+        if len(self.close) < window:
+            return 0.0
+        start = float(self.close.iloc[-window])
+        end = float(self.close.iloc[-1])
+        if start == 0:
+            return 0.0
+        return (end - start) / start
+
     def detect_double_top(self, lookback: int = 100, tolerance: float = 0.02) -> bool:
         """Detect Double Top pattern."""
         if len(self.df) < lookback: return False
@@ -176,9 +189,23 @@ class TechnicalScanner:
         if self.detect_atr_expansion(): results["momentum_factors"].append("ATR Expansion")
         
         # Patterns
-        if self.detect_inside_bar(): results["chart_patterns"].append("Inside Bar")
-        if self.detect_double_bottom(): results["chart_patterns"].append("Double Bottom")
-        if self.detect_double_top(): results["chart_patterns"].append("Double Top")
+        if self.detect_inside_bar():
+            results["chart_patterns"].append("Inside Bar")
+
+        has_double_bottom = self.detect_double_bottom()
+        has_double_top = self.detect_double_top()
+        if has_double_bottom and has_double_top:
+            # Resolve contradictory flags by using recent trend bias.
+            # Bullish bias => prefer Double Bottom, bearish bias => Double Top.
+            bias = self._pattern_regime_bias()
+            if bias >= 0:
+                results["chart_patterns"].append("Double Bottom")
+            else:
+                results["chart_patterns"].append("Double Top")
+        elif has_double_bottom:
+            results["chart_patterns"].append("Double Bottom")
+        elif has_double_top:
+            results["chart_patterns"].append("Double Top")
         # Cup & Handle and Head & Shoulders are complex; adding placeholders for report structure
         
         return results

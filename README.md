@@ -60,10 +60,10 @@ EMAIL_RECIPIENT=recipient@email.com
 | :--- | :--- |
 | **Daily Market Scan** | `python run_optimized_scan.py --limit 50` |
 | **Scan + Email Delivery** | `python run_optimized_scan.py --limit 50 --send-email` |
-| **Deep AI Intelligence Report** | `python run_ai_report.py` |
 | **System Diagnostics** | `python run_optimized_scan.py --diagnostics` |
 | **Test Email Pipeline** | `python test_email_full.py` |
-| **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --limit 250 --workers 8` |
+| **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --workers 8 --send-email` |
+| **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
 
 
 
