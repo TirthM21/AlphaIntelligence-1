@@ -1420,27 +1420,6 @@ class NewsletterGenerator:
                 content.append(f"   - Exit Logic: {reason}")
             content.append("")
 
-        # --- SECTION: ADVANCED TECHNICAL SIGNALS ---
-        content.append("## 🔬 Advanced Technical Signals")
-        content.append("Focus on stocks showing high-probability price behavior and structural patterns.")
-        content.append("")
-        
-        # Combine all relevant ideas to show their signal profile
-        all_ideas = (top_buys or [])[:5] + (top_sells or [])[:5]
-        if all_ideas:
-            for idea in all_ideas:
-                ticker = idea.get('ticker', 'N/A')
-                signals = idea.get('technical_signals', {})
-                if signals and any(signals.values()):
-                    content.append(f"#### {ticker}")
-                    for cat, sig_list in signals.items():
-                        if sig_list:
-                            cat_label = cat.replace('_', ' ').title()
-                            content.append(f"- **{cat_label}:** {', '.join(sig_list)}")
-                    content.append("")
-        else:
-            content.append("- No specific technical patterns detected in high-scoring candidates.")
-        content.append("")
 
         if fund_performance_md:
             content.append("## 3) Fund Performance Snapshot")

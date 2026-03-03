@@ -34,8 +34,7 @@ Our framework bridges two worlds: the **Daily Momentum Alpha** and the **Quarter
 ## 📂 Core Documentation
 1.  **`README.md`**: Fund overview and landing page.
 2.  **`SYSTEM_OVERVIEW.md`**: Technical architecture, module breakdown, and developer reference.
-3.  **`FMP_STABLE_API.md`**: Master reference for Financial Modeling Prep (FMP) Stable API integration.
-4.  **`SIMPLE_TRADE_TRACKER.md`**: The essential Google Sheets template for tracking alpha generation.
+3.  **`SIMPLE_TRADE_TRACKER.md`**: The essential Google Sheets template for tracking alpha generation.
 
 ---
 
@@ -50,7 +49,6 @@ pip install -r requirements.txt
 ### 2. Configure Environment
 Create a `.env` file with your keys:
 ```env
-FMP_API_KEY=your_key_here
 FREE_LLM_API_KEY=your_key_here
 EMAIL_SENDER=your_gmail@gmail.com
 EMAIL_PASSWORD=your_gmail_app_password
@@ -60,11 +58,12 @@ EMAIL_RECIPIENT=recipient@email.com
 ### 3. Execution
 | Goal | Command |
 | :--- | :--- |
-| **Daily Market Scan** | `python run_optimized_scan.py --limit 50 --use-fmp` |
-| **Scan + Email Delivery** | `python run_optimized_scan.py --limit 50 --use-fmp --send-email` |
+| **Daily Market Scan** | `python run_optimized_scan.py --limit 50` |
+| **Scan + Email Delivery** | `python run_optimized_scan.py --limit 50 --send-email` |
 | **Deep AI Intelligence Report** | `python run_ai_report.py` |
 | **System Diagnostics** | `python run_optimized_scan.py --diagnostics` |
 | **Test Email Pipeline** | `python test_email_full.py` |
+| **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --limit 250 --workers 8` |
 
 
 
@@ -75,9 +74,9 @@ The newsletter pipeline now reads provider priority from `config.yaml` under `ne
 ```yaml
 newsletter:
   providers:
-    macro: [fred, fmp]
-    headlines: [finnhub, marketaux, fmp]
-    sector_performance: [fmp, finnhub]
+    macro: [yfinance]
+    headlines: [yfinance]
+    sector_performance: [yfinance]
     prices: [yfinance]
 ```
 
@@ -90,10 +89,6 @@ newsletter:
   - providers missing required API keys.
 
 ### API key requirements
-- `FINNHUB_API_KEY` for Finnhub
-- `MARKETAUX_API_KEY` for Marketaux
-- `FRED_API_KEY` for FRED
-- `FMP_API_KEY` for FMP
 - `yfinance` does not require an API key
 
 If a section has no active providers at runtime, newsletter generation continues with safe fallback content where possible.

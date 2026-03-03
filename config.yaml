@@ -79,7 +79,7 @@ output:
 # Newsletter Data Source Priority Matrix
 newsletter:
   providers:
-    macro: [fred, fmp]
-    headlines: [finnhub, marketaux, fmp]
-    sector_performance: [fmp, finnhub]
+    macro: [yfinance]
+    headlines: [yfinance]
+    sector_performance: [yfinance]
     prices: [yfinance]
