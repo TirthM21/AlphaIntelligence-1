@@ -64,6 +64,7 @@ EMAIL_RECIPIENT=recipient@email.com
 | **Test Email Pipeline** | `python test_email_full.py` |
 | **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --workers 8 --send-email` |
 | **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
+| **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` |
 
 
 

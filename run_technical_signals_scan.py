@@ -29,6 +29,19 @@ CATEGORIES = {
 
 
 
+def _configure_runtime_environment() -> None:
+    """Reduce noisy logs and configure yfinance timezone cache location."""
+    logging.getLogger("yfinance").setLevel(logging.WARNING)
+    logging.getLogger("src.screening.indicators").setLevel(logging.ERROR)
+
+    tz_cache_dir = Path("./data/cache/py-yfinance-tz")
+    tz_cache_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        yf.set_tz_cache_location(str(tz_cache_dir.resolve()))
+    except Exception as exc:
+        logger.debug("Unable to set yfinance timezone cache location: %s", exc)
+
+
 def _load_tickers_with_fallback(include_etfs: bool) -> List[str]:
     """Load tickers from live universe, then cache, then static fallback."""
     try:
@@ -165,6 +178,8 @@ def main() -> None:
     parser.add_argument("--send-email", action="store_true", help="Email the generated technical report")
     parser.add_argument("--output-dir", default="./data/technical_scans", help="Output directory")
     args = parser.parse_args()
+
+    _configure_runtime_environment()
 
     universe = _load_tickers_with_fallback(include_etfs=args.include_etfs)
     tickers = universe[: args.limit] if args.limit and args.limit > 0 else universe
