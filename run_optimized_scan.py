@@ -366,7 +366,7 @@ def main():
     parser.add_argument('--resume', action='store_true', help='Resume from progress')
     parser.add_argument('--clear-progress', action='store_true', help='Clear progress')
     parser.add_argument('--limit', type=int, help='Limit scan to first N stocks (e.g. 50)')
-    parser.add_argument('--tickers', type=str, help='Comma-separated list of specific tickers (e.g. AAPL,MSFT,TSLA)')
+    parser.add_argument('--tickers', type=str, help='Comma-separated list of specific NSE tickers (e.g. RELIANCE.NS,TCS.NS,INFY.NS)')
     parser.add_argument('--test-mode', action='store_true', help='Test with 100 stocks')
     parser.add_argument('--min-price', type=float, default=5.0, help='Min price')
     parser.add_argument('--min-volume', type=int, default=100000, help='Min volume')
