@@ -39,6 +39,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: 🧪 Email config preflight
+        id: email_preflight
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER || secrets.EMAIL_FROM }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
@@ -57,12 +58,14 @@ jobs:
 
           if [ ${#MISSING_VARS[@]} -gt 0 ]; then
             echo "::warning::Missing required email configuration variable(s): ${MISSING_VARS[*]}. Configure EMAIL_SENDER/EMAIL_FROM, EMAIL_PASSWORD, and EMAIL_RECIPIENT/EMAIL_TO in repository secrets."
-            echo "::error::Email preflight failed. Daily scan keeps --send-email enabled, so configure the missing secrets before rerunning this workflow."
-            exit 1
+            echo "⚠️ Email preflight incomplete. Continuing daily scan with email delivery disabled for this run."
+            echo "EMAIL_ENABLED=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           echo "✅ Email preflight passed (required variables are set)."
           echo "ℹ️ SMTP server/port defaults will be used if secrets are not configured."
+          echo "EMAIL_ENABLED=true" >> "$GITHUB_OUTPUT"
       
       - name: 🔍 Run Daily Newsletter Scan
         id: daily_scan
@@ -90,9 +93,17 @@ jobs:
           UNIVERSE_SOURCE="${{ github.event.inputs.universe_source || 'exchange' }}"
           echo "✓ Universe source: $UNIVERSE_SOURCE"
 
+          EMAIL_ENABLED="${{ steps.email_preflight.outputs.EMAIL_ENABLED }}"
+
           # Build command with options
-          CMD="python run_optimized_scan.py --workers 3 --delay 0.5 --universe-source $UNIVERSE_SOURCE --send-email --strict-email"
-          echo "✓ Email newsletter enabled (--send-email)"
+          CMD="python run_optimized_scan.py --workers 3 --delay 0.5 --universe-source $UNIVERSE_SOURCE"
+          if [ "$EMAIL_ENABLED" = "true" ]; then
+            CMD="$CMD --send-email --strict-email"
+            echo "✓ Email newsletter enabled (--send-email --strict-email)"
+          else
+            echo "⚠️ Email newsletter disabled because required secrets are missing."
+            echo "DAILY_EMAIL_STATUS=disabled (missing EMAIL_SENDER/EMAIL_PASSWORD/EMAIL_RECIPIENT secrets)" >> "$GITHUB_ENV"
+          fi
           
           echo "Running: $CMD"
           set -o pipefail

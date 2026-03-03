@@ -12,7 +12,7 @@ on:
       limit:
         description: 'Number of tickers to scan'
         required: false
-        default: '250'
+        default: '0'
       workers:
         description: 'Parallel workers'
         required: false
@@ -40,7 +40,7 @@ jobs:
       - name: 🔎 Run standalone technical signal scan
         run: |
           mkdir -p logs
-          LIMIT="${{ github.event.inputs.limit || '250' }}"
+          LIMIT="${{ github.event.inputs.limit || '0' }}"
           WORKERS="${{ github.event.inputs.workers || '8' }}"
           set -o pipefail
           python run_technical_signals_scan.py --limit "$LIMIT" --workers "$WORKERS" 2>&1 | tee logs/technical_signals_scan.log
