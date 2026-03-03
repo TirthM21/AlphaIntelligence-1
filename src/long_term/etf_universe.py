@@ -8,7 +8,7 @@ filtering for structural themes and quality metrics.
 import json
 import logging
 import os
-from typing import Optional, Dict, List, Any, Tuple
+from typing import Optional, Dict, List, Any
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ class ETFMetadata:
 
     # Metadata
     data_quality_score: float = 0.0
+    market: str = "IN"
 
 
 class ETFUniverse:
@@ -111,6 +112,8 @@ class ETFUniverse:
                 },
             ],
             "exclude_etfs": ["NIFTYBEES.NS", "JUNIORBEES.NS", "SETFNIF50.NS", "SPY", "QQQ"],
+            "market_region": "IN",
+            "allowed_markets": ["IN"],
             "filtering_rules": {
                 "min_aum_millions": 100,
                 "max_expense_ratio": 0.75,
@@ -134,19 +137,177 @@ class ETFUniverse:
         """
         logger.info(f"Discovering thematic ETFs from {source}")
 
-        if source == "manual":
-            return self._get_manual_etf_list()
-        else:
-            # Default: use manual curated list
-            return self._get_manual_etf_list()
+        region = str(self.themes_config.get("market_region", "IN")).upper().strip()
 
-    def _get_manual_etf_list(self) -> List[ETFMetadata]:
+        if source == "manual":
+            return self._get_manual_etf_list(region=region)
+        # Default: use manual curated list
+        return self._get_manual_etf_list(region=region)
+
+    def _get_manual_etf_list(self, region: str = "IN") -> List[ETFMetadata]:
         """
         Return manually curated list of high-quality thematic ETFs.
 
         This is populated with known good thematic ETFs.
         In production, this would be extended with automated discovery.
         """
+        region = (region or "IN").upper().strip()
+
+        if region == "US":
+            return self._get_manual_us_etf_list()
+
+        # Default to India-listed ETFs so the quarterly India universe is consistent
+        return self._get_manual_india_etf_list()
+
+    def _get_manual_india_etf_list(self) -> List[ETFMetadata]:
+        """India-listed ETF universe for thematic allocation."""
+        etfs = [
+            ETFMetadata(
+                ticker="ITBEES.NS",
+                name="Nippon India ETF Nifty IT",
+                theme_id="ai_cloud",
+                theme_name="AI & Cloud Infrastructure",
+                aum_millions=1200,
+                expense_ratio=0.22,
+                turnover=24,
+                inception_date="2015-01-01",
+                top_10_concentration=62,
+                sector_concentration=96,
+                holdings_count=10,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="MON100.NS",
+                name="Motilal Oswal NASDAQ 100 ETF",
+                theme_id="ai_cloud",
+                theme_name="AI & Cloud Infrastructure",
+                aum_millions=2900,
+                expense_ratio=0.54,
+                turnover=18,
+                inception_date="2011-03-29",
+                top_10_concentration=52,
+                sector_concentration=88,
+                holdings_count=100,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="NETFNN50.NS",
+                name="Nippon India ETF Nifty Next 50",
+                theme_id="ai_cloud",
+                theme_name="AI & Cloud Infrastructure",
+                aum_millions=1600,
+                expense_ratio=0.18,
+                turnover=16,
+                inception_date="2003-01-08",
+                top_10_concentration=40,
+                sector_concentration=70,
+                holdings_count=50,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="NIFTYIETF.NS",
+                name="ICICI Prudential Nifty ETF",
+                theme_id="defense",
+                theme_name="Defense & Aerospace",
+                aum_millions=1900,
+                expense_ratio=0.07,
+                turnover=12,
+                inception_date="2013-03-20",
+                top_10_concentration=44,
+                sector_concentration=68,
+                holdings_count=50,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="ICICIB22.NS",
+                name="ICICI Bharat 22 ETF",
+                theme_id="defense",
+                theme_name="Defense & Aerospace",
+                aum_millions=2500,
+                expense_ratio=0.09,
+                turnover=14,
+                inception_date="2017-11-14",
+                top_10_concentration=46,
+                sector_concentration=72,
+                holdings_count=22,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="CPSEETF.NS",
+                name="CPSE ETF",
+                theme_id="energy_transition",
+                theme_name="Energy Transition",
+                aum_millions=3100,
+                expense_ratio=0.07,
+                turnover=20,
+                inception_date="2014-03-28",
+                top_10_concentration=64,
+                sector_concentration=86,
+                holdings_count=10,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="NIFITETF.NS",
+                name="Nifty India Manufacturing ETF",
+                theme_id="energy_transition",
+                theme_name="Energy Transition",
+                aum_millions=450,
+                expense_ratio=0.32,
+                turnover=27,
+                inception_date="2021-02-10",
+                top_10_concentration=38,
+                sector_concentration=78,
+                holdings_count=30,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="PHARMABEES.NS",
+                name="Nippon India ETF Nifty Pharma",
+                theme_id="healthcare_innovation",
+                theme_name="Healthcare Innovation",
+                aum_millions=800,
+                expense_ratio=0.22,
+                turnover=26,
+                inception_date="2020-01-15",
+                top_10_concentration=55,
+                sector_concentration=93,
+                holdings_count=20,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="MOMOMENTUM.NS",
+                name="Motilal Oswal Nifty 200 Momentum 30 ETF",
+                theme_id="healthcare_innovation",
+                theme_name="Healthcare Innovation",
+                aum_millions=1300,
+                expense_ratio=0.30,
+                turnover=34,
+                inception_date="2020-02-19",
+                top_10_concentration=48,
+                sector_concentration=74,
+                holdings_count=30,
+                market="IN",
+            ),
+            ETFMetadata(
+                ticker="MAFANG.NS",
+                name="Mirae Asset NYSE FANG+ ETF",
+                theme_id="cybersecurity",
+                theme_name="Cybersecurity",
+                aum_millions=900,
+                expense_ratio=0.60,
+                turnover=22,
+                inception_date="2021-04-19",
+                top_10_concentration=100,
+                sector_concentration=95,
+                holdings_count=10,
+                market="IN",
+            ),
+        ]
+
+        return etfs
+
+    def _get_manual_us_etf_list(self) -> List[ETFMetadata]:
+        """US-listed fallback ETF universe (legacy behavior)."""
         etfs = [
             # AI & Cloud Infrastructure
             ETFMetadata(
@@ -161,6 +322,7 @@ class ETFUniverse:
                 top_10_concentration=52,
                 sector_concentration=98,
                 holdings_count=107,
+                market="US",
             ),
             ETFMetadata(
                 ticker="SMH",
@@ -174,6 +336,7 @@ class ETFUniverse:
                 top_10_concentration=48,
                 sector_concentration=95,
                 holdings_count=52,
+                market="US",
             ),
             ETFMetadata(
                 ticker="NVDA",
@@ -187,6 +350,7 @@ class ETFUniverse:
                 top_10_concentration=100,
                 sector_concentration=100,
                 holdings_count=1,
+                market="US",
             ),
 
             # Defense & Aerospace
@@ -202,6 +366,7 @@ class ETFUniverse:
                 top_10_concentration=38,
                 sector_concentration=92,
                 holdings_count=67,
+                market="US",
             ),
             ETFMetadata(
                 ticker="XAR",
@@ -215,6 +380,7 @@ class ETFUniverse:
                 top_10_concentration=42,
                 sector_concentration=88,
                 holdings_count=47,
+                market="US",
             ),
 
             # Energy Transition
@@ -230,6 +396,7 @@ class ETFUniverse:
                 top_10_concentration=28,
                 sector_concentration=85,
                 holdings_count=102,
+                market="US",
             ),
             ETFMetadata(
                 ticker="TAN",
@@ -243,6 +410,7 @@ class ETFUniverse:
                 top_10_concentration=32,
                 sector_concentration=90,
                 holdings_count=56,
+                market="US",
             ),
 
             # Healthcare Innovation
@@ -258,6 +426,7 @@ class ETFUniverse:
                 top_10_concentration=25,
                 sector_concentration=92,
                 holdings_count=118,
+                market="US",
             ),
             ETFMetadata(
                 ticker="BBH",
@@ -271,6 +440,7 @@ class ETFUniverse:
                 top_10_concentration=22,
                 sector_concentration=88,
                 holdings_count=95,
+                market="US",
             ),
 
             # Cybersecurity
@@ -286,6 +456,7 @@ class ETFUniverse:
                 top_10_concentration=28,
                 sector_concentration=82,
                 holdings_count=41,
+                market="US",
             ),
             ETFMetadata(
                 ticker="HACK",
@@ -299,6 +470,7 @@ class ETFUniverse:
                 top_10_concentration=32,
                 sector_concentration=75,
                 holdings_count=48,
+                market="US",
             ),
         ]
 
@@ -319,6 +491,7 @@ class ETFUniverse:
         max_expense = rules.get("max_expense_ratio", 0.75)
         max_turnover = rules.get("max_turnover", 200)
         exclude_list = self.themes_config.get("exclude_etfs", [])
+        allowed_markets = [m.upper() for m in self.themes_config.get("allowed_markets", ["IN"]) if m]
 
         filtered = []
 
@@ -326,6 +499,13 @@ class ETFUniverse:
             # Skip single-stock holdings and excluded tickers
             if etf.holdings_count <= 1 or etf.ticker in exclude_list:
                 logger.debug(f"Skipping {etf.ticker} (excluded or single-stock)")
+                continue
+
+            # Match configured market region(s)
+            if allowed_markets and etf.market.upper() not in allowed_markets:
+                logger.debug(
+                    f"Skipping {etf.ticker} (market {etf.market} not in allowed {allowed_markets})"
+                )
                 continue
 
             # Check AUM
