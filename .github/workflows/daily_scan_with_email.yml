@@ -1,7 +1,11 @@
 name: Daily Market Scan & Newsletter
 
 on:
-  # Run each US-market day overnight (10:30 UTC ~= 5:30/6:30 AM ET depending on DST)
+  push:
+    branches:
+      - main
+
+  # Run each India trading day morning (10:30 UTC ~= 4:00 PM IST)
   schedule:
     - cron: '30 10 * * 1-5'  # Weekdays at 10:30 AM UTC
   
@@ -17,7 +21,7 @@ on:
         required: false
         default: 'true'
       universe_source:
-        description: 'Universe source (exchange, auto, fmp, finnhub)'
+        description: 'Universe source (exchange or auto)'
         required: false
         default: 'exchange'
 

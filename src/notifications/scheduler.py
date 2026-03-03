@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from src.data import YahooFinanceFetcher, StockDatabase
+from src.data import YahooFinanceFetcher, StockDatabase, StockUniverseFetcher
 from src.screening import screen_candidates
 from .email_notifier import EmailNotifier
 from .slack_notifier import SlackNotifier
@@ -61,6 +61,8 @@ class ScreeningScheduler:
             enable_email: Whether to send email notifications.
             enable_slack: Whether to send Slack notifications.
         """
+        self.universe_fetcher = StockUniverseFetcher()
+
         # Load tickers
         if tickers:
             self.tickers = tickers
@@ -69,12 +71,12 @@ class ScreeningScheduler:
             if tickers_env:
                 self.tickers = [t.strip() for t in tickers_env.split(',')]
             else:
-                # Default ticker list
-                self.tickers = [
-                    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META',
-                    'JPM', 'BAC', 'WMT', 'JNJ', 'XOM'
-                ]
-                logger.warning(f"No tickers configured. Using defaults: {self.tickers}")
+                # Default to full NSE equity universe
+                self.tickers = self.universe_fetcher.fetch_universe()
+                logger.warning(
+                    "No tickers configured. Using full NSE equity universe: %s tickers",
+                    len(self.tickers),
+                )
 
         self.top_n = int(os.getenv('SCREENING_TOP_N', '10'))
         self.min_signal = float(os.getenv('SCREENING_MIN_SIGNAL', '50'))

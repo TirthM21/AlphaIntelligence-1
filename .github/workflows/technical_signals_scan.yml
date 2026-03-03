@@ -1,6 +1,10 @@
 name: Standalone Technical Signals Scan
 
 on:
+  push:
+    branches:
+      - main
+
   schedule:
     - cron: '0 12 * * 1-5'
   workflow_dispatch:

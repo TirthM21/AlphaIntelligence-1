@@ -82,7 +82,7 @@ jobs:
           FORCE_FULL_REFRESH: ${{ github.event.inputs.force_full_refresh || 'false' }}
           CACHED_STOCKS: ${{ steps.cache-check.outputs.cached_stocks }}
         run: |
-          echo "Starting screening with:"
+          echo "Starting NSE screening with:"
           echo "  - Fresh price data for all stocks (1 year history)"
           echo "  - Smart fundamental refresh (earnings-aware)"
           echo "  - Cached fundamentals: $CACHED_STOCKS stocks"
@@ -102,27 +102,27 @@ jobs:
           echo "=== Fundamental Cache Statistics ==="
           if [ -f "data/fundamentals_cache/metadata.json" ]; then
             echo "Latest updates:"
-            python3 << 'PYTHON_SCRIPT'
-          import json
-          from datetime import datetime
+            python3 <<'PYTHON_SCRIPT'
+            import json
+            from datetime import datetime
 
-          try:
-              with open("data/fundamentals_cache/metadata.json", "r") as f:
-                  metadata = json.load(f)
+            try:
+                with open("data/fundamentals_cache/metadata.json", "r") as f:
+                    metadata = json.load(f)
 
-              # Show last 10 updated stocks
-              updates = [(ticker, data["last_updated"]) for ticker, data in metadata.items()]
-              updates.sort(key=lambda x: x[1], reverse=True)
+                # Show last 10 updated stocks
+                updates = [(ticker, data["last_updated"]) for ticker, data in metadata.items()]
+                updates.sort(key=lambda x: x[1], reverse=True)
 
-              print(f"Total tracked: {len(updates)} stocks")
-              print("\nLast 10 updates:")
-              for ticker, timestamp in updates[:10]:
-                  dt = datetime.fromisoformat(timestamp)
-                  formatted = dt.strftime("%Y-%m-%d %H:%M")
-                  print(f"  {ticker}: {formatted}")
-          except Exception as e:
-              print(f"Could not read metadata: {e}")
-          PYTHON_SCRIPT
+                print(f"Total tracked: {len(updates)} stocks")
+                print("\nLast 10 updates:")
+                for ticker, timestamp in updates[:10]:
+                    dt = datetime.fromisoformat(timestamp)
+                    formatted = dt.strftime("%Y-%m-%d %H:%M")
+                    print(f"  {ticker}: {formatted}")
+            except Exception as e:
+                print(f"Could not read metadata: {e}")
+            PYTHON_SCRIPT
           else
             echo "No metadata file found"
           fi
