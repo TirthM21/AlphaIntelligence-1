@@ -3,7 +3,7 @@
 Tracks hedge fund performance by:
 1. Opening positions when BUY signals fire
 2. Closing positions when SELL signals fire or stop-loss/SMA violations occur
-3. Computing fund-level metrics: P&L, win rate, Sharpe, drawdown, alpha vs SPY
+3. Computing fund-level metrics: P&L, win rate, Sharpe, drawdown, alpha vs Nifty 50
 """
 
 import logging
@@ -29,27 +29,27 @@ class PerformanceTracker:
         """
         self.strategy = strategy
         self.db = DBManager()
-        self._spy_price = None
+        self._benchmark_price = None
         self.price_service = PriceService()
 
     @property
-    def spy_price(self) -> float:
-        """Get current SPY price (cached per session)."""
-        if self._spy_price is None:
+    def benchmark_price(self) -> float:
+        """Get current Nifty 50 price (cached per session)."""
+        if self._benchmark_price is None:
             for attempt in range(3):
-                spy_price = self.price_service.get_current_price("SPY")
-                if spy_price and spy_price > 0:
-                    self._spy_price = float(spy_price)
+                bench_price = self.price_service.get_current_price("^NSEI")
+                if bench_price and bench_price > 0:
+                    self._benchmark_price = float(bench_price)
                     break
                 if attempt < 2:
                     time.sleep(1)
-            if self._spy_price is None:
-                logger.info("SPY price unavailable after 3 attempts; continuing with benchmark=0.0")
-                self._spy_price = 0.0
-        return self._spy_price or 0.0
+            if self._benchmark_price is None:
+                logger.info("Nifty 50 price unavailable after 3 attempts; continuing with benchmark=0.0")
+                self._benchmark_price = 0.0
+        return self._benchmark_price or 0.0
 
     def process_signals(self, buy_signals: List[Dict], sell_signals: List[Dict],
-                        spy_price: float = None):
+                        benchmark_price: float = None):
         """Process buy/sell signals from a scan run.
         
         - Opens positions for new BUY signals
@@ -58,10 +58,10 @@ class PerformanceTracker:
         Args:
             buy_signals: List of buy signal dicts from the scanner
             sell_signals: List of sell signal dicts from the scanner
-            spy_price: Current SPY price for benchmarking
+            benchmark_price: Current Nifty 50 price for benchmarking
         """
-        if spy_price:
-            self._spy_price = spy_price
+        if benchmark_price:
+            self._benchmark_price = benchmark_price
 
         opened = 0
         closed = 0
@@ -110,7 +110,7 @@ class PerformanceTracker:
                     exit_price=current_price,
                     exit_reason='SELL_SIGNAL',
                     strategy=self.strategy,
-                    spy_price=self.spy_price
+                    benchmark_price=self.benchmark_price
                 )
                 if result:
                     closed += 1
@@ -129,7 +129,7 @@ class PerformanceTracker:
                     stop_loss=stop_loss,
                     signal_score=score,
                     strategy=self.strategy,
-                    spy_price=self.spy_price
+                    benchmark_price=self.benchmark_price
                 )
                 if success:
                     opened += 1
@@ -169,11 +169,11 @@ class PerformanceTracker:
                     exit_price=current_price,
                     exit_reason='STOP_LOSS',
                     strategy=self.strategy,
-                    spy_price=self.spy_price
+                    benchmark_price=self.benchmark_price
                 )
                 if result:
                     closed.append(result)
-                    logger.warning(f"🛑 Stop loss hit: {ticker} @ ${current_price:.2f} (stop: ${stop_loss:.2f})")
+                    logger.warning(f"🛑 Stop loss hit: {ticker} @ {current_price:.2f} (stop: {stop_loss:.2f})")
 
         if closed:
             logger.info(f"🛑 {len(closed)} position(s) closed via stop loss")
@@ -239,11 +239,11 @@ class PerformanceTracker:
         # Max drawdown
         max_dd = self._compute_max_drawdown(realized_pnl)
 
-        # Alpha vs SPY
+        # Alpha vs Nifty 50
         alpha = self._compute_alpha(closed_positions)
 
-        # SPY return (over same period as our trades)
-        spy_return = self._compute_spy_return(closed_positions)
+        # Nifty 50 return (over same period as our trades)
+        benchmark_return = self._compute_benchmark_return(closed_positions)
 
         metrics = {
             'strategy': self.strategy,
@@ -259,8 +259,8 @@ class PerformanceTracker:
             'worst_trade': worst_trade,
             'sharpe_ratio': round(sharpe, 2) if sharpe else None,
             'max_drawdown': round(max_dd, 2) if max_dd else None,
-            'alpha_vs_spy': round(alpha, 2),
-            'spy_return': round(spy_return, 2),
+            'alpha_vs_benchmark': round(alpha, 2),
+            'benchmark_return': round(benchmark_return, 2),
             'open_position_details': unrealized_pnl,
             'total_trades': len(realized_pnl)
         }
@@ -296,8 +296,8 @@ class PerformanceTracker:
             lines.append(f"| **Sharpe Ratio** | {metrics['sharpe_ratio']:.2f} |")
         if metrics.get('max_drawdown') is not None:
             lines.append(f"| **Max Drawdown** | {metrics['max_drawdown']:.2f}% |")
-        lines.append(f"| **Alpha vs SPY** | {metrics['alpha_vs_spy']:+.2f}% |")
-        lines.append(f"| **SPY Return** | {metrics['spy_return']:+.2f}% |")
+        lines.append(f"| **Alpha vs Nifty 50** | {metrics['alpha_vs_benchmark']:+.2f}% |")
+        lines.append(f"| **Nifty 50 Return** | {metrics['benchmark_return']:+.2f}% |")
         if metrics.get('best_trade'):
             lines.append(f"| **Best Trade** | {metrics['best_trade']} |")
         if metrics.get('worst_trade'):
@@ -314,7 +314,7 @@ class PerformanceTracker:
                 days_held = (datetime.utcnow() - pos['entry_date']).days if pos.get('entry_date') else 0
                 emoji = "🟢" if pos['pnl_pct'] > 0 else "🔴"
                 lines.append(
-                    f"| {emoji} {pos['ticker']} | ${pos['entry']:.2f} | ${pos['current']:.2f} | "
+                    f"| {emoji} {pos['ticker']} | {pos['entry']:.2f} | {pos['current']:.2f} | "
                     f"{pos['pnl_pct']:+.1f}% | {days_held}d |"
                 )
             lines.append("")
@@ -328,8 +328,8 @@ class PerformanceTracker:
             for trade in closed:
                 emoji = "💰" if trade['pnl_pct'] > 0 else "📉"
                 lines.append(
-                    f"| {emoji} {trade['ticker']} | ${trade['entry_price']:.2f} | "
-                    f"${trade['exit_price']:.2f} | {trade['pnl_pct']:+.1f}% | "
+                    f"| {emoji} {trade['ticker']} | {trade['entry_price']:.2f} | "
+                    f"{trade['exit_price']:.2f} | {trade['pnl_pct']:+.1f}% | "
                     f"{trade['exit_reason']} | {trade['hold_days']}d |"
                 )
             lines.append("")
@@ -378,33 +378,33 @@ class PerformanceTracker:
         return max_dd
 
     def _compute_alpha(self, closed_positions: List[Dict]) -> float:
-        """Compute alpha vs SPY from closed positions."""
+        """Compute alpha vs Nifty 50 from closed positions."""
         if not closed_positions:
             return 0.0
 
         alphas = []
         for pos in closed_positions:
-            if (pos.get('spy_entry_price') and pos.get('spy_exit_price') 
+            if (pos.get('benchmark_entry_price') and pos.get('benchmark_exit_price') 
                     and pos.get('pnl_pct') is not None
-                    and pos['spy_entry_price'] > 0):
-                spy_return = ((pos['spy_exit_price'] - pos['spy_entry_price']) 
-                              / pos['spy_entry_price']) * 100
-                alpha = pos['pnl_pct'] - spy_return
+                    and pos['benchmark_entry_price'] > 0):
+                bench_return = ((pos['benchmark_exit_price'] - pos['benchmark_entry_price']) 
+                              / pos['benchmark_entry_price']) * 100
+                alpha = pos['pnl_pct'] - bench_return
                 alphas.append(alpha)
 
         return float(np.mean(alphas)) if alphas else 0.0
 
-    def _compute_spy_return(self, closed_positions: List[Dict]) -> float:
-        """Compute average SPY return over the same periods as our trades."""
+    def _compute_benchmark_return(self, closed_positions: List[Dict]) -> float:
+        """Compute average Nifty 50 return over the same periods as our trades."""
         if not closed_positions:
             return 0.0
 
-        spy_returns = []
+        bench_returns = []
         for pos in closed_positions:
-            if (pos.get('spy_entry_price') and pos.get('spy_exit_price')
-                    and pos['spy_entry_price'] > 0):
-                spy_r = ((pos['spy_exit_price'] - pos['spy_entry_price'])
-                         / pos['spy_entry_price']) * 100
-                spy_returns.append(spy_r)
+            if (pos.get('benchmark_entry_price') and pos.get('benchmark_exit_price')
+                    and pos['benchmark_entry_price'] > 0):
+                bench_r = ((pos['benchmark_exit_price'] - pos['benchmark_entry_price'])
+                         / pos['benchmark_entry_price']) * 100
+                bench_returns.append(bench_r)
 
-        return float(np.mean(spy_returns)) if spy_returns else 0.0
+        return float(np.mean(bench_returns)) if bench_returns else 0.0

@@ -60,7 +60,7 @@ class GitStorageFetcher:
             try:
                 # Add a small delay between fresh fetches to avoid spamming
                 # Especially important when called in parallel threads
-                time.sleep(0.5) 
+                time.sleep(0.1) 
 
                 stock = yf.Ticker(ticker)
                 # DO NOT use stock.info, it's a separate slow request

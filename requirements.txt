@@ -16,5 +16,5 @@ ndg-httpsclient
 pyopenssl
 pyasn1
 fredapi>=0.5.1
-finnhub-python>=2.4.19
+nse[local]
 matplotlib>=3.7.0

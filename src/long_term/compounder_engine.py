@@ -3,7 +3,7 @@ Long-term compounder identification engine.
 
 Scores stocks on:
 - 60% Fundamental Dominance (growth, capital efficiency, reinvestment, balance sheet)
-- 25% Long-Horizon RS Persistence (multi-year outperformance vs SPY)
+- 25% Long-Horizon RS Persistence (multi-year outperformance vs Nifty 50)
 - 15% Structural Trend Durability (40-week MA trends, smooth equity curves)
 
 Returns deterministic, continuous scores 0-110+ with detailed breakdowns.
@@ -261,19 +261,19 @@ class CompounderEngine:
         """Score multi-year relative strength persistence (25 points max)."""
         from .metrics import MetricsCalculator
 
-        # 1-year total return vs SPY: 0-8 points (-10% = 0, +20% = 8)
+        # 1-year total return vs Nifty 50: 0-8 points (-10% = 0, +20% = 8)
         returns_1yr = price_data.get("returns_1yr", 0.0)
         score.rs_1yr_score = MetricsCalculator.scale_linear(
             returns_1yr, -0.10, 0.20, 0.0, 8.0
         )
 
-        # 3-year annualized return vs SPY: 0-10 points (-5% = 0, +15% = 10)
+        # 3-year annualized return vs Nifty 50: 0-10 points (-5% = 0, +15% = 10)
         returns_3yr = price_data.get("returns_3yr", 0.0)
         score.rs_3yr_score = MetricsCalculator.scale_linear(
             returns_3yr, -0.05, 0.15, 0.0, 10.0
         )
 
-        # 5-year annualized return vs SPY: 0-7 points (-3% = 0, +12% = 7)
+        # 5-year annualized return vs Nifty 50: 0-7 points (-3% = 0, +12% = 7)
         returns_5yr = price_data.get("returns_5yr", 0.0)
         score.rs_5yr_score = MetricsCalculator.scale_linear(
             returns_5yr, -0.03, 0.12, 0.0, 7.0
@@ -378,7 +378,7 @@ class CompounderEngine:
             else:
                 score.regime = "MATURE_HOLD"
 
-    def _generate_thesis(self, score: CompounderScore) -> None:
+    def _generate_thesis(self        , score: CompounderScore) -> None:
         """Generate key thesis drivers for the score."""
         score.thesis_drivers = []
 
@@ -397,7 +397,7 @@ class CompounderEngine:
         # RS drivers
         if score.rs_3yr_score > 8.0:
             score.thesis_drivers.append(
-                "Strong multi-year relative strength vs SPY"
+                "Strong multi-year relative strength vs Nifty 50"
             )
 
         # Trend drivers

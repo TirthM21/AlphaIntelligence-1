@@ -65,6 +65,20 @@ class YahooFinanceFetcher:
         self.retry_delay = retry_delay
         logger.info(f"YahooFinanceFetcher initialized with cache_dir: {cache_dir}")
 
+    def is_price_cached(self, ticker: str, period: str = "5y", interval: str = "1d") -> bool:
+        """Check if price data for a ticker is cached and valid.
+        
+        Args:
+            ticker: Stock ticker
+            period: Time period
+            interval: Data interval
+            
+        Returns:
+            True if valid cache exists
+        """
+        cache_path = self._get_cache_path(ticker, f'prices_{period}_{interval}')
+        return self._is_cache_valid(cache_path)
+
     def _get_cache_path(self, ticker: str, data_type: str) -> Path:
         """Get the cache file path for a given ticker and data type.
 

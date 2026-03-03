@@ -24,6 +24,7 @@ from src.data.fundamentals_fetcher import analyze_fundamentals_for_signal
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
 from src.data.git_storage_fetcher import GitStorageFetcher
 from ..screening.phase_indicators import classify_phase, calculate_relative_strength, detect_vcp_pattern
+from ..screening.signal_engine import analyze_technical_signals
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,11 +40,10 @@ class OptimizedBatchProcessor:
         self,
         cache_dir: str = "./data/cache",
         results_dir: str = "./data/batch_results",
-        max_workers: int = 3,  # Conservative: 3 workers
-        rate_limit_delay: float = 0.5,  # 0.5 sec = 2 TPS per worker
+        max_workers: int = 5,  # Increased to 5 workers
+        rate_limit_delay: float = 0.2,  # Reduced to 0.2 sec = 5 TPS per worker
         batch_size: int = 100,
-        use_git_storage: bool = False,
-        use_fmp: bool = False
+        use_git_storage: bool = False
     ):
         """Initialize optimized processor.
 
@@ -54,11 +54,9 @@ class OptimizedBatchProcessor:
             rate_limit_delay: Delay per worker (0.5 = 2 TPS)
             batch_size: Save progress frequency
             use_git_storage: Use Git-based storage for fundamentals (recommended)
-            use_fmp: Use FMP for enhanced fundamentals
         """
         self.fetcher = YahooFinanceFetcher(cache_dir=cache_dir)
         self.enhanced_fetcher = EnhancedFundamentalsFetcher()
-        self.use_fmp = use_fmp
         self.git_fetcher = GitStorageFetcher() if use_git_storage else None
         self.use_git_storage = use_git_storage
         self.results_dir = Path(results_dir)
@@ -71,8 +69,8 @@ class OptimizedBatchProcessor:
         # Effective TPS = max_workers / rate_limit_delay
         effective_tps = max_workers / rate_limit_delay
 
-        self.spy_data = None
-        self.spy_price = None
+        self.benchmark_data = None
+        self.benchmark_price = None
         self.progress_file = self.results_dir / "batch_progress.pkl"
         self.processed_tickers = set()
         self.current_results = []
@@ -133,13 +131,19 @@ class OptimizedBatchProcessor:
         except Exception as e:
             logger.error(f"Error saving progress: {e}")
 
-    def _wait_for_rate_limit(self):
+    def _wait_for_rate_limit(self, ticker: Optional[str] = None):
         """Thread-safe rate limiting - ensures minimum delay between ANY requests.
 
         This method uses a lock to ensure that even with multiple threads,
         only one request can proceed at a time, and each request waits
         the full rate_limit_delay since the last request.
+        
+        If ticker is provided and its data is cached, we skip the wait.
         """
+        # Skip wait if price is already cached (fundamental cache check happens later)
+        if ticker and self.fetcher.is_price_cached(ticker):
+            return
+
         with self.rate_limit_lock:
             current_time = time.time()
             time_since_last = current_time - self.last_request_time
@@ -155,34 +159,33 @@ class OptimizedBatchProcessor:
 
             self.last_request_time = time.time()
 
-    def fetch_spy_data(self) -> bool:
-        """Fetch SPY benchmark data."""
+    def fetch_benchmark_data(self) -> bool:
+        """Fetch Nifty 50 benchmark data."""
         try:
-            logger.info("Fetching SPY data...")
-            # Use 1 year for price data (not 2 years - 50% less data)
+            logger.info("Fetching Nifty 50 data...")
             # Use same fetcher as stocks for consistency
             if self.use_git_storage and self.git_fetcher:
-                spy_hist = self.git_fetcher.fetch_price_fresh('SPY')
+                bench_hist = self.git_fetcher.fetch_price_fresh('^NSEI')
             else:
-                spy_hist = self.fetcher.fetch_price_history('SPY', period='1y')
+                bench_hist = self.fetcher.fetch_price_history('^NSEI', period='1y')
 
-            if spy_hist.empty:
-                logger.error("Failed to fetch SPY data")
+            if bench_hist.empty:
+                logger.error("Failed to fetch Nifty 50 data")
                 return False
 
             # Ensure DatetimeIndex (yfinance should return this, but verify)
-            if not isinstance(spy_hist.index, pd.DatetimeIndex):
-                logger.error(f"SPY has invalid index type: {type(spy_hist.index)}")
-                logger.error(f"SPY index: {spy_hist.index}")
+            if not isinstance(bench_hist.index, pd.DatetimeIndex):
+                logger.error(f"Benchmark has invalid index type: {type(bench_hist.index)}")
+                logger.error(f"Benchmark index: {bench_hist.index}")
                 return False
 
-            self.spy_data = spy_hist
-            self.spy_price = spy_hist['Close'].iloc[-1]
-            logger.info(f"SPY ready: {len(spy_hist)} days, ${self.spy_price:.2f}")
+            self.benchmark_data = bench_hist
+            self.benchmark_price = bench_hist['Close'].iloc[-1]
+            logger.info(f"Nifty 50 ready: {len(bench_hist)} days, price: {self.benchmark_price:.2f}")
             return True
 
         except Exception as e:
-            logger.error(f"Error fetching SPY: {e}")
+            logger.error(f"Error fetching Nifty 50: {e}")
             return False
 
     def analyze_single_stock(
@@ -205,7 +208,8 @@ class OptimizedBatchProcessor:
         """
         try:
             # Thread-safe rate limiting (locks ensure only 1 request at a time)
-            self._wait_for_rate_limit()
+            # Only blocks if ticker data is NOT in cache
+            self._wait_for_rate_limit(ticker)
 
             self.total_requests += 1
 
@@ -256,7 +260,7 @@ class OptimizedBatchProcessor:
             # RS calculation
             rs_series = calculate_relative_strength(
                 price_data['Close'],
-                self.spy_data['Close'],
+                self.benchmark_data['Close'],
                 period=63
             )
 
@@ -275,9 +279,12 @@ class OptimizedBatchProcessor:
                 if self.use_git_storage and self.git_fetcher:
                     quarterly_data = self.git_fetcher.fetch_fundamentals_smart(ticker)
                 else:
-                    quarterly_data = self.enhanced_fetcher.fetch_quarterly_data(ticker, use_fmp=self.use_fmp)
+                    quarterly_data = self.enhanced_fetcher.fetch_quarterly_data(ticker)
                 
                 fundamental_analysis = analyze_fundamentals_for_signal(quarterly_data)
+
+            # Categorical Technical Signals
+            technical_signals = analyze_technical_signals(price_data)
 
             return {
                 'ticker': ticker,
@@ -288,7 +295,8 @@ class OptimizedBatchProcessor:
                 'rs_series': rs_series,
                 'vcp_data': vcp_data,  # Added VCP analysis
                 'quarterly_data': quarterly_data,
-                'fundamental_analysis': fundamental_analysis
+                'fundamental_analysis': fundamental_analysis,
+                'technical_signals': technical_signals
             }
 
         except Exception as e:
@@ -359,9 +367,9 @@ class OptimizedBatchProcessor:
         logger.info(f"Est. time: {len(tickers) * self.rate_limit_delay / self.max_workers / 3600:.1f} hours")
         logger.info("="*60)
 
-        # Fetch SPY
-        if not self.fetch_spy_data():
-            return {'error': 'Failed to fetch SPY'}
+        # Fetch Nifty 50
+        if not self.fetch_benchmark_data():
+            return {'error': 'Failed to fetch Nifty 50'}
 
         # Load progress
         if resume:

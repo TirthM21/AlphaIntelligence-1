@@ -1,0 +1,16 @@
+2026-03-02 20:58:02,707 - src.reporting.newsletter_generator - WARNING - FinnhubFetcher unavailable
+2026-03-02 20:58:02,707 - src.reporting.newsletter_generator - WARNING - MarketauxFetcher unavailable
+2026-03-02 20:58:02,708 - src.reporting.newsletter_generator - WARNING - FredFetcher unavailable
+2026-03-02 20:58:04,410 - __main__ - INFO - Configuration: 3 workers ╫ 2.0 TPS = ~6.0 TPS effective
+2026-03-02 20:58:04,410 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only for India)
+2026-03-02 20:58:04,436 - src.data.nse_fetcher - INFO - NSEFetcher initialized
+2026-03-02 20:58:04,436 - src.data.universe_fetcher - INFO - StockUniverseFetcher initialized (NSE India)
+2026-03-02 20:58:04,436 - __main__ - INFO - Fetching stock universe...
+2026-03-02 20:58:04,436 - __main__ - ERROR - Fatal error: StockUniverseFetcher.fetch_universe() got an unexpected keyword argument 'source_preference'
+Traceback (most recent call last):
+  File "C:\Users\Tirtub\Desktop\Downloads\stock-screener-long-hold\run_optimized_scan.py", line 494, in main
+    tickers = universe_fetcher.fetch_universe(source_preference=args.universe_source)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: StockUniverseFetcher.fetch_universe() got an unexpected keyword argument 'source_preference'
+2026-03-02 20:58:04,438 - src.notifications.email_notifier - INFO - Email notifications enabled - will send to tirthmehta8994@gmail.com
+2026-03-02 20:58:07,518 - src.notifications.email_notifier - INFO - \u2705 Error alert sent to tirthmehta8994@gmail.com

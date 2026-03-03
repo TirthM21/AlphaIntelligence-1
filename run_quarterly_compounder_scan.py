@@ -63,10 +63,10 @@ class QuarterlyCompounderScan:
 
             # Try to import real data fetchers, use fallback if unavailable
             try:
-                from src.data.universe_fetcher import USStockUniverseFetcher
+                from src.data.universe_fetcher import StockUniverseFetcher
                 from src.data.fetcher import YahooFinanceFetcher
                 from src.long_term.data_fetcher import LongTermFundamentalsFetcher
-                self.universe_fetcher = USStockUniverseFetcher()
+                self.universe_fetcher = StockUniverseFetcher()
                 self.price_fetcher = YahooFinanceFetcher()
                 self.fundamentals_fetcher = LongTermFundamentalsFetcher()
                 self.use_real_data = True
@@ -105,22 +105,22 @@ class QuarterlyCompounderScan:
         if self.test_mode:
             # Use test stocks
             stocks = [
-                {"ticker": "AAPL", "name": "Apple", "sector": "Technology"},
-                {"ticker": "MSFT", "name": "Microsoft", "sector": "Technology"},
-                {"ticker": "NVDA", "name": "NVIDIA", "sector": "Technology"},
-                {"ticker": "GOOGL", "name": "Alphabet", "sector": "Technology"},
-                {"ticker": "META", "name": "Meta", "sector": "Technology"},
-                {"ticker": "JPM", "name": "JPMorgan", "sector": "Financials"},
-                {"ticker": "UNH", "name": "United Health", "sector": "Healthcare"},
-                {"ticker": "JNJ", "name": "Johnson & Johnson", "sector": "Healthcare"},
-                {"ticker": "PG", "name": "Procter & Gamble", "sector": "Consumer"},
-                {"ticker": "WMT", "name": "Walmart", "sector": "Consumer"},
+                {"ticker": "RELIANCE.NS", "name": "Reliance Industries", "sector": "Energy"},
+                {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "sector": "Technology"},
+                {"ticker": "HDFCBANK.NS", "name": "HDFC Bank", "sector": "Financials"},
+                {"ticker": "INFY.NS", "name": "Infosys", "sector": "Technology"},
+                {"ticker": "ICICIBANK.NS", "name": "ICICI Bank", "sector": "Financials"},
+                {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever", "sector": "Consumer"},
+                {"ticker": "ITC.NS", "name": "ITC", "sector": "Consumer"},
+                {"ticker": "SBIN.NS", "name": "State Bank of India", "sector": "Financials"},
+                {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel", "sector": "Communications"},
+                {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance", "sector": "Financials"},
             ]
             logger.info(f"✓ Test mode: Using {len(stocks)} test stocks")
         else:
             # Fetch real stock universe from data sources if available
             if self.universe_fetcher:
-                logger.info("Fetching real stock universe...")
+                logger.info("Fetching real stock universe (e.g., NSE 500)...")
                 try:
                     tickers = self.universe_fetcher.fetch_universe()
                     if not tickers:
@@ -146,48 +146,48 @@ class QuarterlyCompounderScan:
         return self._get_fallback_stock_universe()
 
     def _get_fallback_stock_universe(self) -> List[Dict]:
-        """Fallback hardcoded stock list (top 50 by market cap)."""
+        """Fallback hardcoded stock list (Top Nifty 50 symbols)."""
         return [
-            {"ticker": "AAPL", "name": "Apple", "sector": "Information Technology"},
-            {"ticker": "MSFT", "name": "Microsoft", "sector": "Information Technology"},
-            {"ticker": "NVDA", "name": "NVIDIA", "sector": "Information Technology"},
-            {"ticker": "GOOGL", "name": "Alphabet", "sector": "Information Technology"},
-            {"ticker": "GOOG", "name": "Alphabet", "sector": "Information Technology"},
-            {"ticker": "META", "name": "Meta", "sector": "Information Technology"},
-            {"ticker": "AMZN", "name": "Amazon", "sector": "Consumer Discretionary"},
-            {"ticker": "TSLA", "name": "Tesla", "sector": "Consumer Discretionary"},
-            {"ticker": "BRK.B", "name": "Berkshire Hathaway", "sector": "Financials"},
-            {"ticker": "JPM", "name": "JPMorgan Chase", "sector": "Financials"},
-            {"ticker": "V", "name": "Visa", "sector": "Information Technology"},
-            {"ticker": "WMT", "name": "Walmart", "sector": "Consumer Staples"},
-            {"ticker": "PG", "name": "Procter & Gamble", "sector": "Consumer Staples"},
-            {"ticker": "JNJ", "name": "Johnson & Johnson", "sector": "Healthcare"},
-            {"ticker": "UNH", "name": "UnitedHealth Group", "sector": "Healthcare"},
-            {"ticker": "XOM", "name": "ExxonMobil", "sector": "Energy"},
-            {"ticker": "CVX", "name": "Chevron", "sector": "Energy"},
-            {"ticker": "LMT", "name": "Lockheed Martin", "sector": "Industrials"},
-            {"ticker": "RTX", "name": "Raytheon Technologies", "sector": "Industrials"},
-            {"ticker": "MA", "name": "Mastercard", "sector": "Information Technology"},
-            {"ticker": "AXP", "name": "American Express", "sector": "Financials"},
-            {"ticker": "BA", "name": "Boeing", "sector": "Industrials"},
-            {"ticker": "CAT", "name": "Caterpillar", "sector": "Industrials"},
-            {"ticker": "GE", "name": "General Electric", "sector": "Industrials"},
-            {"ticker": "IBM", "name": "IBM", "sector": "Information Technology"},
-            {"ticker": "INTC", "name": "Intel", "sector": "Information Technology"},
-            {"ticker": "AMD", "name": "Advanced Micro Devices", "sector": "Information Technology"},
-            {"ticker": "PYPL", "name": "PayPal", "sector": "Information Technology"},
-            {"ticker": "NFLX", "name": "Netflix", "sector": "Communication Services"},
-            {"ticker": "DIS", "name": "Disney", "sector": "Communication Services"},
-            {"ticker": "CRM", "name": "Salesforce", "sector": "Information Technology"},
-            {"ticker": "ADBE", "name": "Adobe", "sector": "Information Technology"},
-            {"ticker": "CSCO", "name": "Cisco Systems", "sector": "Information Technology"},
-            {"ticker": "ACN", "name": "Accenture", "sector": "Information Technology"},
-            {"ticker": "AVGO", "name": "Broadcom", "sector": "Information Technology"},
-            {"ticker": "QCOM", "name": "Qualcomm", "sector": "Information Technology"},
-            {"ticker": "TSM", "name": "Taiwan Semiconductor", "sector": "Information Technology"},
-            {"ticker": "ORCL", "name": "Oracle", "sector": "Information Technology"},
-            {"ticker": "SAP", "name": "SAP SE", "sector": "Information Technology"},
-            {"ticker": "NOW", "name": "ServiceNow", "sector": "Information Technology"},
+            {"ticker": "RELIANCE.NS", "name": "Reliance Industries", "sector": "Energy"},
+            {"ticker": "TCS.NS", "name": "Tata Consultancy Services", "sector": "Technology"},
+            {"ticker": "HDFCBANK.NS", "name": "HDFC Bank", "sector": "Financials"},
+            {"ticker": "INFY.NS", "name": "Infosys", "sector": "Technology"},
+            {"ticker": "ICICIBANK.NS", "name": "ICICI Bank", "sector": "Financials"},
+            {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever", "sector": "Consumer"},
+            {"ticker": "ITC.NS", "name": "ITC", "sector": "Consumer"},
+            {"ticker": "SBIN.NS", "name": "State Bank of India", "sector": "Financials"},
+            {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel", "sector": "Communications"},
+            {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance", "sector": "Financials"},
+            {"ticker": "LT.NS", "name": "Larsen & Toubro", "sector": "Industrials"},
+            {"ticker": "HCLTECH.NS", "name": "HCL Technologies", "sector": "Technology"},
+            {"ticker": "ASIANPAINT.NS", "name": "Asian Paints", "sector": "Consumer"},
+            {"ticker": "MARUTI.NS", "name": "Maruti Suzuki", "sector": "Consumer"},
+            {"ticker": "SUNPHARMA.NS", "name": "Sun Pharma", "sector": "Healthcare"},
+            {"ticker": "TITAN.NS", "name": "Titan Company", "sector": "Consumer"},
+            {"ticker": "ADANIENT.NS", "name": "Adani Enterprises", "sector": "Energy"},
+            {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement", "sector": "Industrials"},
+            {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank", "sector": "Financials"},
+            {"ticker": "AXISBANK.NS", "name": "Axis Bank", "sector": "Financials"},
+            {"ticker": "ONGC.NS", "name": "ONGC", "sector": "Energy"},
+            {"ticker": "NTPC.NS", "name": "NTPC", "sector": "Energy"},
+            {"ticker": "M&M.NS", "name": "Mahindra & Mahindra", "sector": "Consumer"},
+            {"ticker": "TATASTEEL.NS", "name": "Tata Steel", "sector": "Industrials"},
+            {"ticker": "JSWSTEEL.NS", "name": "JSW Steel", "sector": "Industrials"},
+            {"ticker": "POWERGRID.NS", "name": "Power Grid", "sector": "Energy"},
+            {"ticker": "HEROMOTOCO.NS", "name": "Hero MotoCorp", "sector": "Consumer"},
+            {"ticker": "GRASIM.NS", "name": "Grasim Industries", "sector": "Industrials"},
+            {"ticker": "BAJAJFINSV.NS", "name": "Bajaj Finserv", "sector": "Financials"},
+            {"ticker": "COALINDIA.NS", "name": "Coal India", "sector": "Energy"},
+            {"ticker": "HINDALCO.NS", "name": "Hindalco", "sector": "Industrials"},
+            {"ticker": "TATAMOTORS.NS", "name": "Tata Motors", "sector": "Consumer"},
+            {"ticker": "SBILIFE.NS", "name": "SBI Life Insurance", "sector": "Financials"},
+            {"ticker": "EICHERMOT.NS", "name": "Eicher Motors", "sector": "Consumer"},
+            {"ticker": "NESTLEIND.NS", "name": "Nestle India", "sector": "Consumer"},
+            {"ticker": "DRREDDY.NS", "name": "Dr. Reddy's", "sector": "Healthcare"},
+            {"ticker": "WIPRO.NS", "name": "Wipro", "sector": "Technology"},
+            {"ticker": "TECHM.NS", "name": "Tech Mahindra", "sector": "Technology"},
+            {"ticker": "CIPLA.NS", "name": "Cipla", "sector": "Healthcare"},
+            {"ticker": "BPCL.NS", "name": "BPCL", "sector": "Energy"},
         ]
 
     def _fetch_price_data(self, ticker: str) -> Dict:
@@ -239,9 +239,9 @@ class QuarterlyCompounderScan:
             "returns_1yr": returns_1yr,
             "returns_3yr": returns_3yr,
             "returns_5yr": returns_5yr,
-            "spy_returns_1yr": 0.10,
-            "spy_returns_3yr": 0.08,
-            "spy_returns_5yr": 0.10,
+            "bench_returns_1yr": 0.12,
+            "bench_returns_3yr": 0.10,
+            "bench_returns_5yr": 0.12,
             "price_40w_ma": ma_40w,
             "ma_40w_slope": ma_40w_slope,
             "months_in_uptrend": months_in_uptrend,
@@ -363,8 +363,8 @@ class QuarterlyCompounderScan:
                     except (ValueError, TypeError):
                         max_drawdown_3yr = -0.30  # Conservative default
 
-                    # Assume SPY max drawdown for reference
-                    spy_max_drawdown_3yr = -0.15  # Historical average
+                    # Assume Nifty 50 max drawdown for reference
+                    bench_max_drawdown_3yr = -0.20  # Historical average for Nifty
 
                     # Ensure all values are numeric
                     price_data = {
@@ -372,11 +372,11 @@ class QuarterlyCompounderScan:
                         "returns_1yr": float(returns_1yr),
                         "returns_3yr": float(returns_3yr),
                         "returns_5yr": float(returns_5yr),
-                        "spy_returns_1yr": 0.10,
-                        "spy_returns_3yr": 0.08,
-                        "spy_returns_5yr": 0.10,
+                        "bench_returns_1yr": 0.12,
+                        "bench_returns_3yr": 0.10,
+                        "bench_returns_5yr": 0.12,
                         "max_drawdown_3yr": float(max_drawdown_3yr),
-                        "spy_max_drawdown_3yr": float(spy_max_drawdown_3yr),
+                        "bench_max_drawdown_3yr": float(bench_max_drawdown_3yr),
                         "price_40w_ma": float(ma_40w),
                         "ma_40w_slope": float(ma_40w_slope),
                         "months_in_uptrend": int(months_in_uptrend),
@@ -405,9 +405,9 @@ class QuarterlyCompounderScan:
                         "returns_1yr": -0.10 + (price_seed * 0.50),         # -10% to +40%
                         "returns_3yr": 0.02 + (price_seed * 0.30),          # 2% to 32%
                         "returns_5yr": 0.03 + (price_seed * 0.35),          # 3% to 38%
-                        "spy_returns_1yr": 0.10,
-                        "spy_returns_3yr": 0.08,
-                        "spy_returns_5yr": 0.10,
+                        "bench_returns_1yr": 0.12,
+                        "bench_returns_3yr": 0.10,
+                        "bench_returns_5yr": 0.12,
                         "price_40w_ma": 145 + (price_seed * 30),            # 145-175
                         "ma_40w_slope": -0.05 + (price_seed * 0.15),        # -5% to +10%
                         "months_in_uptrend": int(6 + (price_seed * 30)),    # 6-36 months
@@ -511,9 +511,9 @@ class QuarterlyCompounderScan:
                         "return_1yr": 0.05 + (price_seed * 0.35),      # 5% to 40%
                         "return_3yr": 0.02 + (price_seed * 0.26),      # 2% to 28%
                         "return_5yr": 0.01 + (price_seed * 0.25),      # 1% to 26%
-                        "spy_return_1yr": 0.10,
-                        "spy_return_3yr": 0.08,
-                        "spy_return_5yr": 0.10,
+                        "bench_return_1yr": 0.12,
+                        "bench_return_3yr": 0.10,
+                        "bench_return_5yr": 0.12,
                     }
 
                     score = self.etf_engine.score_etf(etf.__dict__, price_data)
@@ -713,7 +713,7 @@ class QuarterlyCompounderScan:
         try:
             logger.info("")
             logger.info("=" * 80)
-            logger.info("QUARTERLY COMPOUNDER SCAN")
+            logger.info("QUARTERLY COMPOUNDER SCAN - NSE INDIA")
             logger.info("=" * 80)
             if self.test_mode:
                 logger.info("MODE: Test (limited universe)")
@@ -782,13 +782,13 @@ class QuarterlyCompounderScan:
                     if signal['ticker'] in real_prices:
                         signal['current_price'] = real_prices[signal['ticker']]
                 
-                tracker.process_signals(buy_signals, [], spy_price=None)
+                tracker.process_signals(buy_signals, [], benchmark_price=None)
                 tracker.check_stop_losses()
                 metrics = tracker.compute_fund_metrics()
                 
                 logger.info(f"✓ Quarterly performance tracked: {metrics.get('open_positions', 0)} positions, "
                            f"win rate {metrics.get('win_rate', 0):.1f}%, "
-                           f"alpha {metrics.get('alpha_vs_spy', 0):+.2f}%")
+                           f"alpha {metrics.get('alpha_vs_benchmark', 0):+.2f}%")
             except Exception as tracker_err:
                 logger.warning(f"Performance tracker error (non-fatal): {tracker_err}")
 

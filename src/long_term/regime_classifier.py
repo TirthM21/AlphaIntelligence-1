@@ -106,7 +106,7 @@ class RegimeClassifier:
         1. Price > 40-week MA AND > 200-day MA
         2. 40-week MA slope > 0 for ≥12 consecutive months
         3. Revenue + EPS CAGR (3-year) both > 0%
-        4. RS vs SPY positive over 1Y, 3Y, and 5Y windows
+        4. RS vs Nifty 50 positive over 1Y, 3Y, and 5Y windows
         5. ROIC > WACC
 
         Returns:

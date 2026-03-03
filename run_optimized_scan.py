@@ -31,10 +31,10 @@ from collections import Counter
 if sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-from src.data.universe_fetcher import USStockUniverseFetcher
+from src.data.universe_fetcher import StockUniverseFetcher
 from src.screening.optimized_batch_processor import OptimizedBatchProcessor
 from src.screening.benchmark import (
-    analyze_spy_trend,
+    analyze_benchmark_trend,
     calculate_market_breadth,
     format_benchmark_summary,
     should_generate_signals
@@ -46,8 +46,6 @@ from src.reporting.portfolio_manager import PortfolioManager
 from src.reporting.performance_tracker import PerformanceTracker
 from src.notifications.email_notifier import EmailNotifier
 from src.database.db_manager import DBManager
-from src.data.fmp_fetcher import FMPFetcher
-from src.data.sec_fetcher import SECFetcher
 from src.ai.ai_agent import AIAgent
 
 
@@ -120,7 +118,7 @@ def _write_newsletter_fallback_artifacts(root_cause: str) -> str:
     return str(fallback_path)
 
 
-def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, output_dir="./data/daily_scans"):
+def save_report(results, buy_signals, sell_signals, benchmark_analysis, breadth, output_dir="./data/daily_scans"):
     """Save comprehensive report."""
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
@@ -129,7 +127,7 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
 
     output = []
     output.append("="*80)
-    output.append("OPTIMIZED FULL MARKET SCAN - ALL US STOCKS")
+    output.append("OPTIMIZED FULL MARKET SCAN - NSE INDIA STOCKS")
     output.append(f"Scan Date: {date_str}")
     output.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     output.append("="*80)
@@ -165,7 +163,7 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
     output.append("")
 
     # Benchmark
-    output.append(format_benchmark_summary(spy_analysis, breadth))
+    output.append(format_benchmark_summary(benchmark_analysis, breadth))
     output.append("")
 
     # Buy signals
@@ -203,7 +201,7 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
 
             # CRITICAL: Stop loss and R/R ratio
             if signal.get('stop_loss'):
-                output.append(f"Stop Loss: ${signal['stop_loss']:.2f}")
+                output.append(f"Stop Loss: {signal['stop_loss']:.2f}")
                 details = signal.get('details', {})
                 risk_amt = details.get('risk_amount', 0)
                 reward_amt = details.get('reward_amount', 0)
@@ -215,10 +213,10 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
                     rr_emoji = "🟢"  # Good R/R
                 else:
                     rr_emoji = "🟡"  # Poor R/R
-                output.append(f"{rr_emoji} Risk/Reward: {rr_ratio:.1f}:1 (Risk ${risk_amt:.2f}, Reward ${reward_amt:.2f})")
+                output.append(f"{rr_emoji} Risk/Reward: {rr_ratio:.1f}:1 (Risk {risk_amt:.2f}, Reward {reward_amt:.2f})")
 
             if signal.get('breakout_price'):
-                output.append(f"Breakout: ${signal['breakout_price']:.2f}")
+                output.append(f"Breakout: {signal['breakout_price']:.2f}")
 
             details = signal.get('details', {})
             if 'rs_slope' in details:
@@ -265,6 +263,14 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
             for reason in signal['reasons'][:7]:  # Show 7 instead of 5
                 output.append(f"  • {reason}")
 
+            # Technical Signals
+            tech_sigs = signal.get('technical_signals', {})
+            if any(tech_sigs.values()):
+                output.append("\nTechnical Signals:")
+                for cat, sig_list in tech_sigs.items():
+                    if sig_list:
+                        output.append(f"  • {cat.replace('_', ' ').title()}: {', '.join(sig_list)}")
+
             if signal.get('fundamental_snapshot'):
                 output.append(signal['fundamental_snapshot'])
 
@@ -310,7 +316,7 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
             output.append(f"{'#'*80}")
             output.append(f"Phase: {signal['phase']} | {severity_emoji} Severity: {severity.upper()}")
             if signal.get('breakdown_level'):
-                output.append(f"Breakdown: ${signal['breakdown_level']:.2f}")
+                output.append(f"Breakdown: {signal['breakdown_level']:.2f}")
             details = signal.get('details', {})
             if 'rs_slope' in details:
                 rs_slope = details['rs_slope']
@@ -325,6 +331,14 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
             output.append("\nSell Reasons:")
             for reason in signal['reasons'][:5]:
                 output.append(f"  • {reason}")
+
+            # Technical Signals
+            tech_sigs = signal.get('technical_signals', {})
+            if any(tech_sigs.values()):
+                output.append("\nTechnical Signals:")
+                for cat, sig_list in tech_sigs.items():
+                    if sig_list:
+                        output.append(f"  • {cat.replace('_', ' ').title()}: {', '.join(sig_list)}")
 
             if signal.get('fundamental_snapshot'):
                 output.append(signal['fundamental_snapshot'])
@@ -362,8 +376,8 @@ def save_report(results, buy_signals, sell_signals, spy_analysis, breadth, outpu
 
 def main():
     parser = argparse.ArgumentParser(description='Optimized Full Market Scanner')
-    parser.add_argument('--workers', type=int, default=3, help='Parallel workers (default: 3)')
-    parser.add_argument('--delay', type=float, default=0.5, help='Delay per worker (default: 0.5s)')
+    parser.add_argument('--workers', type=int, default=5, help='Parallel workers (default: 5)')
+    parser.add_argument('--delay', type=float, default=0.2, help='Delay per worker (default: 0.2s)')
     parser.add_argument('--conservative', action='store_true', help='Ultra-conservative mode (2 workers, 1.0s delay)')
     parser.add_argument('--aggressive', action='store_true', help='Faster mode (5 workers, 0.3s delay) - MAY HIT RATE LIMITS!')
     parser.add_argument('--resume', action='store_true', help='Resume from progress')
@@ -373,15 +387,14 @@ def main():
     parser.add_argument('--test-mode', action='store_true', help='Test with 100 stocks')
     parser.add_argument('--min-price', type=float, default=5.0, help='Min price')
     parser.add_argument('--min-volume', type=int, default=100000, help='Min volume')
-    parser.add_argument('--use-fmp', action='store_true', help='Use FMP for enhanced fundamentals on buy signals')
+    parser.add_argument('--etfs', action='store_true', help='Scan NSE ETFs instead of stocks')
     parser.add_argument('--git-storage', action='store_true', help='Use Git-based storage for fundamentals (recommended)')
-    parser.add_argument('--download-sec', action='store_true', help='Download SEC 10-Qs for top buy signals (requires sec-edgar-toolkit)')
     parser.add_argument('--send-email', action='store_true', help='Force-enable newsletter email delivery')
     parser.add_argument('--no-email', action='store_true', help='Disable newsletter email delivery')
     parser.add_argument('--strict-email', action='store_true',
                         help='Fail run when email delivery has zero successful sends')
-    parser.add_argument('--diagnostics', action='store_true', help='Run diagnostic check for API keys and SEC access')
-    parser.add_argument('--universe-source', type=str, default='exchange', choices=['auto','exchange','fmp','finnhub'],
+    parser.add_argument('--diagnostics', action='store_true', help='Run diagnostic check for API keys and basic access')
+    parser.add_argument('--universe-source', type=str, default='exchange', choices=['auto','exchange'],
                         help='Universe source preference (default: exchange)')
     parser.add_argument('--prefetch-storage', action='store_true', help='Warm git storage fundamentals before scan')
     parser.add_argument('--no-prefetch-storage', action='store_true', help='Skip warm-up storage pass before scan')
@@ -415,60 +428,10 @@ def main():
         logger.info("DIAGNOSTIC CHECK")
         logger.info("="*60)
         
-        # 1. Check FMP
-        fmp_key = os.getenv('FMP_API_KEY')
-        if not fmp_key:
-            logger.error("✗ FMP_API_KEY not found in .env")
-        if fmp_key:
-            f = FMPFetcher(api_key=fmp_key)
-            test_data = f.fetch_income_statement("AAPL", limit=1)
-            if test_data:
-                logger.info("✓ FMP API: Working correctly")
-            else:
-                logger.error("✗ FMP API: Key found but failed to fetch data (Check tier/limits)")
-        
-        # 2. Check SEC
-        try:
-            s = SECFetcher(download_dir="./data/test_sec")
-            logger.info("✓ SEC Fetcher: Module loaded")
-        except Exception as e:
-            logger.error(f"✗ SEC Fetcher: Failed to initialize: {e}")
-            
-        # 3. Check FRED
-        try:
-            from src.data.fred_fetcher import FredFetcher
-            fred = FredFetcher()
-            if fred.api_key:
-                test_geo = fred.fetch_series_observations("FEDFUNDS", limit=1)
-                if test_geo:
-                    logger.info("✓ FRED API: Working correctly")
-                else:
-                    logger.warning("⚠ FRED API: Key present but fetch failed")
-            else:
-                logger.warning("• FRED API: Not configured (Optional)")
-        except Exception as e:
-            logger.error(f"✗ FRED Fetcher: Error: {e}")
-
-        # 4. Check MarketAux
-        try:
-            from src.data.marketaux_fetcher import MarketauxFetcher
-            aux = MarketauxFetcher()
-            if aux.api_key:
-                test_news = aux.fetch_market_news(limit=1)
-                if test_news:
-                    logger.info("✓ MarketAux API: Working correctly")
-                else:
-                    logger.warning("⚠ MarketAux API: Key present but fetch failed")
-            else:
-                logger.warning("• MarketAux API: Not configured (Optional)")
-        except Exception as e:
-            logger.error(f"✗ MarketAux Fetcher: Error: {e}")
-
-        # 5. Check Email
+        # 1. Check Email
         n = EmailNotifier()
         if n.enabled:
             logger.info(f"✓ Email: Configured (Sender: {n.sender_email})")
-            # Create a simple test email object to verify it doesn't crash on init
         else:
             logger.warning("• Email: Not configured (Optional)")
             
@@ -477,16 +440,12 @@ def main():
 
     # Initialize enhanced fundamentals fetcher
     fundamentals_fetcher = EnhancedFundamentalsFetcher()
-    if args.use_fmp and fundamentals_fetcher.fmp_available:
-        logger.info("FMP enabled - will use for buy signal fundamentals (DCF + Insider + Margins)")
-    elif args.use_fmp:
-        logger.warning("--use-fmp specified but FMP_API_KEY not set. Using Finnhub fallback then yfinance.")
 
     try:
         # Fetch universe
-        universe_fetcher = USStockUniverseFetcher()
-        logger.info("Fetching stock universe...")
-        tickers = universe_fetcher.fetch_universe(source_preference=args.universe_source)
+        universe_fetcher = StockUniverseFetcher()
+        logger.info(f"Fetching {'ETF' if args.etfs else 'stock'} universe...")
+        tickers = universe_fetcher.fetch_universe(include_etfs=args.etfs)
 
         if not tickers:
             logger.error("Failed to fetch universe")
@@ -508,20 +467,14 @@ def main():
         processor = OptimizedBatchProcessor(
             max_workers=args.workers,
             rate_limit_delay=args.delay,
-            use_git_storage=args.git_storage,
-            use_fmp=args.use_fmp
+            use_git_storage=args.git_storage
         )
 
         if args.git_storage:
             logger.info("Git-based fundamental storage enabled - 74% API call reduction!")
 
-        if args.use_fmp:
-            logger.info("FMP API integration enabled for high-fidelity fundamentals.")
-        else:
-            logger.info("Using standard yfinance fundamentals (FMP disabled).")
+        logger.info("Using standard yfinance fundamentals.")
 
-        if args.download_sec:
-            logger.info("SEC Filing verification/download enabled for top signals.")
 
         if args.clear_progress:
             processor.clear_progress()
@@ -545,9 +498,9 @@ def main():
 
         # Analysis
         logger.info("Generating signals...")
-        spy_analysis = analyze_spy_trend(processor.spy_data, processor.spy_price)
+        benchmark_analysis = analyze_benchmark_trend(processor.benchmark_data, processor.benchmark_price)
         breadth = calculate_market_breadth(results['phase_results'])
-        signal_rec = should_generate_signals(spy_analysis, breadth)
+        signal_rec = should_generate_signals(benchmark_analysis, breadth)
 
         # Buy signals
         buy_signals = []
@@ -573,16 +526,11 @@ def main():
             
             ai_agent = AIAgent()
             
-            logger.info(f"Enriching top {len(preliminary_buys)} candidates with SEC and AI analysis...")
+            logger.info(f"Enriching top {len(preliminary_buys)} candidates with AI analysis...")
             for analysis, signal in preliminary_buys:
                 ticker = analysis['ticker']
                 
-                # 1. SEC Confirmation
-                sec_status = "Not requested"
-                if args.download_sec:
-                    sec_status = fundamentals_fetcher.download_sec_filing(ticker, '10-Q')
-                
-                # 2. AI Assessment
+                # AI Assessment
                 ai_commentary = None
                 if ai_agent.api_key:
                     ai_commentary = ai_agent.generate_commentary(ticker, {
@@ -591,7 +539,7 @@ def main():
                         "fundamentals": analysis.get('quarterly_data', {})
                     })
 
-                # 3. Final Re-Score (The "Mixture")
+                # Final Re-Score (The "Mixture")
                 final_signal = score_buy_signal(
                     ticker=ticker,
                     price_data=analysis['price_data'],
@@ -600,18 +548,16 @@ def main():
                     rs_series=analysis['rs_series'],
                     fundamentals=analysis.get('quarterly_data'),
                     vcp_data=analysis.get('vcp_data'),
-                    sec_status=sec_status,
                     premium_commentary=ai_commentary
                 )
                 
                 # Attach extras for the report
                 final_signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
                     ticker,
-                    quarterly_data=analysis.get('quarterly_data', {}),
-                    use_fmp=args.use_fmp
+                    quarterly_data=analysis.get('quarterly_data', {})
                 )
                 final_signal['ai_commentary'] = ai_commentary
-                final_signal['sec_status'] = sec_status
+                final_signal['technical_signals'] = analysis.get('technical_signals', {})
                 
                 buy_signals.append(final_signal)
 
@@ -634,15 +580,15 @@ def main():
                         # Add fundamental snapshot
                         signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
                             analysis['ticker'],
-                            quarterly_data=analysis.get('quarterly_data', {}),
-                            use_fmp=args.use_fmp
+                            quarterly_data=analysis.get('quarterly_data', {})
                         )
+                        signal['technical_signals'] = analysis.get('technical_signals', {})
                         sell_signals.append(signal)
 
         sell_signals = sorted(sell_signals, key=lambda x: x['score'], reverse=True)
 
         # Report
-        save_report(results, buy_signals, sell_signals, spy_analysis, breadth)
+        save_report(results, buy_signals, sell_signals, benchmark_analysis, breadth)
 
         # Record Recommendations & Generate Portfolio Reports
         try:
@@ -651,7 +597,7 @@ def main():
             # Record current signals for historical alpha tracking
             # Combine buys and sells for the database record
             all_signals = buy_signals + sell_signals
-            db.record_recommendations(all_signals, spy_price=processor.spy_price)
+            db.record_recommendations(all_signals, benchmark_price=processor.benchmark_price)
             
             # Generate advanced reports (Allocation, Rebalance, Alpha Tracker)
             pm = PortfolioManager()
@@ -666,7 +612,7 @@ def main():
             tracker = PerformanceTracker(strategy='DAILY')
             
             # 1. Process new signals → open/close positions
-            tracker.process_signals(buy_signals, sell_signals, spy_price=processor.spy_price)
+            tracker.process_signals(buy_signals, sell_signals, benchmark_price=processor.benchmark_price)
             
             # 2. Check stop-losses on all open positions
             stopped_out = tracker.check_stop_losses()
@@ -686,7 +632,7 @@ def main():
             
             # Prepare status dict
             market_status = {
-                'spy': spy_analysis,
+                'benchmark': benchmark_analysis,
                 'breadth': breadth
             }
             
@@ -854,20 +800,7 @@ def main():
         except Exception as ai_report_err:
             logger.error(f"Failed to generate AI Deep-Dive Report: {ai_report_err}")
 
-        # Show FMP usage if enabled
-        if args.use_fmp:
-            usage = fundamentals_fetcher.get_api_usage()
-            logger.info("="*60)
-            logger.info("FMP API USAGE")
-            logger.info(f"Attempted calls: {usage['fmp_attempted_calls']}/{usage['fmp_daily_limit']}")
-            logger.info(f"Successful calls: {usage['fmp_successful_calls']}")
-            logger.info(f"Throttled calls: {usage['fmp_throttled_calls']}")
-            logger.info(f"Cache hits: {usage['fmp_cache_hits']}")
-            logger.info(f"Calls remaining: {usage['fmp_calls_remaining']}")
-            if 'bandwidth_used_mb' in usage:
-                logger.info(f"Bandwidth used: {usage['bandwidth_used_mb']:.1f} MB / {usage['bandwidth_limit_gb']:.1f} GB ({usage['bandwidth_pct_used']:.1f}%)")
-                logger.info(f"Earnings season: {'Yes' if usage['is_earnings_season'] else 'No'} (cache: {usage['cache_hours']}h)")
-            logger.info("="*60)
+        logger.info("="*60)
 
         logger.info("="*60)
         logger.info("SCAN COMPLETE")
@@ -875,8 +808,6 @@ def main():
         logger.info(f"Actual TPS: {results['actual_tps']:.2f}")
         logger.info(f"Buy signals: {len(buy_signals)}")
         logger.info(f"Sell signals: {len(sell_signals)}")
-        if args.download_sec:
-            logger.info(f"SEC Filings: Downloaded for top {min(len(buy_signals), 10)} buys")
         logger.info("="*60)
 
     except KeyboardInterrupt:

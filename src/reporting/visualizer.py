@@ -94,7 +94,7 @@ class MarketVisualizer:
     def available_chart_keys(self) -> List[str]:
         """Return supported daily chart keys for AI-driven selection."""
         return [
-            "sp500_decline_vs_return",
+            "nifty50_decline_vs_return",
             "market_breadth_snapshot",
             "sector_leadership",
             "seasonality_context",
@@ -117,9 +117,9 @@ class MarketVisualizer:
 
         chart_specs = [
             (
-                "sp500_decline_vs_return",
-                lambda: self.generate_sp500_decline_vs_return_chart(),
-                "S&P 500 Intra-Year Declines vs Calendar-Year Returns",
+                "nifty50_decline_vs_return",
+                lambda: self.generate_nifty50_decline_vs_return_chart(),
+                "Nifty 50 Intra-Year Declines vs Calendar-Year Returns",
                 "Annual returns (bars) versus maximum intra-year drawdowns (red dots) since 1980.",
             ),
             (
@@ -136,9 +136,9 @@ class MarketVisualizer:
             ),
             (
                 "seasonality_context",
-                lambda: self.generate_seasonality_context_chart(ticker="SPY"),
+                lambda: self.generate_seasonality_context_chart(ticker="^NSEI"),
                 "Seasonality Context (Current Month vs Other Months)",
-                "Average monthly return context for SPY over the last 10 years.",
+                "Average monthly return context for Nifty 50 over the last 10 years.",
             ),
             (
                 "market_cap_leadership",
@@ -172,10 +172,10 @@ class MarketVisualizer:
 
         return artifacts
 
-    def generate_sp500_decline_vs_return_chart(self) -> str:
-        """Create a dense annual bar/drawdown chart inspired by institutional market notes."""
+    def generate_nifty50_decline_vs_return_chart(self) -> str:
+        """Create a dense annual bar/drawdown chart for Nifty 50."""
         try:
-            hist = yf.download("^GSPC", start="1980-01-01", auto_adjust=True, progress=False)
+            hist = yf.download("^NSEI", start="2000-01-01", auto_adjust=True, progress=False)
         except Exception:
             return ""
         if hist.empty or "Close" not in hist.columns:
@@ -238,7 +238,7 @@ class MarketVisualizer:
         avg_decline = abs(df["max_decline"].mean())
         positive_years = int((df["annual_return"] > 0).sum())
         total_years = len(df)
-        ax.set_title("S&P 500 intra-year declines vs. calendar year returns", loc="left", fontsize=16, pad=12, fontweight="bold")
+        ax.set_title("Nifty 50 intra-year declines vs. calendar year returns", loc="left", fontsize=16, pad=12, fontweight="bold")
         ax.text(
             0.0,
             1.02,
@@ -249,7 +249,7 @@ class MarketVisualizer:
         )
 
         fig.tight_layout()
-        output_path = self._build_chart_path("sp500_decline_vs_return")
+        output_path = self._build_chart_path("nifty50_decline_vs_return")
         fig.savefig(output_path, dpi=self.style.dpi, bbox_inches="tight")
         plt.close(fig)
         return str(output_path)
@@ -399,7 +399,7 @@ class MarketVisualizer:
         plt.close(fig)
         return str(output_path)
 
-    def generate_seasonality_context_chart(self, ticker: str = "SPY") -> str:
+    def generate_seasonality_context_chart(self, ticker: str = "^NSEI") -> str:
         """Create a context chart for current month average vs overall monthly averages."""
         try:
             hist = yf.Ticker(ticker).history(period="10y", interval="1mo")

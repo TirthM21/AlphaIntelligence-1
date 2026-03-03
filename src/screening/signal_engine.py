@@ -18,6 +18,7 @@ from .phase_indicators import (
     validate_minervini_trend_template,
     calculate_sma
 )
+from .technical_signals import TechnicalScanner
 
 logging.basicConfig(
     level=logging.INFO,
@@ -101,7 +102,6 @@ def score_buy_signal(
     rs_series: pd.Series,
     fundamentals: Optional[Dict] = None,
     vcp_data: Optional[Dict] = None,
-    sec_status: Optional[str] = None,
     premium_commentary: Optional[str] = None
 ) -> Dict[str, any]:
     """Score a buy signal for swing/position trading (NOT day trading).
@@ -436,7 +436,7 @@ def score_buy_signal(
     # ========================================================================
     # 4. RELATIVE STRENGTH (10 points) - Market-relative performance
     # ========================================================================
-    # RS measures stock performance vs SPY (market-relative strength)
+    # RS measures stock performance vs Nifty 50 (market-relative strength)
     # Different from technical trend which is absolute price structure
     # Strong RS = stock outperforming market
 
@@ -458,7 +458,7 @@ def score_buy_signal(
         rs_score = min(10, max(0, 5 + (rs_slope * 16.67)))
 
         if rs_slope > 0.10:
-            reasons.append(f'✓ Strong RS: {rs_slope:.3f} (outperforming SPY)')
+            reasons.append(f'✓ Strong RS: {rs_slope:.3f} (outperforming Nifty 50)')
         elif rs_slope > 0.03:
             reasons.append(f'Positive RS: {rs_slope:.3f}')
         elif rs_slope > -0.03:
@@ -466,7 +466,7 @@ def score_buy_signal(
         elif rs_slope > -0.10:
             reasons.append(f'Weak RS: {rs_slope:.3f}')
         else:
-            reasons.append(f'⚠ Declining RS: {rs_slope:.3f} (underperforming SPY)')
+            reasons.append(f'⚠ Declining RS: {rs_slope:.3f} (underperforming Nifty 50)')
     else:
         details['rs_slope'] = None
         rs_score = 5  # Neutral if missing
@@ -651,12 +651,8 @@ def score_buy_signal(
     # ========================================================================
     # 9. INSTITUTIONAL CONFLUENCE (Bonus 5 points)
     # ========================================================================
-    # Using SEC status and Premium commentary as trust factors
+    # Using Premium commentary as trust factor
     confluence_bonus = 0
-    if sec_status and "Success" in sec_status:
-        confluence_bonus += 2
-        reasons.append("✓ SEC Transparency: Recent filing verified")
-    
     if premium_commentary and len(premium_commentary) > 50:
         confluence_bonus += 3
         # We don't append the commentary here to keep reasons readable
@@ -923,3 +919,8 @@ def format_signal_output(signal: Dict, signal_type: str = 'buy') -> str:
             output += f"  • {reason}\n"
 
     return output
+
+def analyze_technical_signals(price_data: pd.DataFrame) -> Dict[str, List[str]]:
+    """Analyze all categorical technical signals for a stock."""
+    scanner = TechnicalScanner(price_data)
+    return scanner.scan_all()

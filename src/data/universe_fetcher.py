@@ -1,6 +1,6 @@
-"""Fetch and maintain the universe of all publicly traded US stocks.
+"""Fetch and maintain the universe of Indian stocks listed on NSE.
 
-This module fetches the complete list of US-listed stocks from multiple sources
+This module fetches the complete list of NSE-listed stocks
 and maintains a daily-updated universe for screening.
 """
 
@@ -12,10 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Set
 
 import pandas as pd
-import requests
 
-from .fmp_fetcher import FMPFetcher
-from .finnhub_fetcher import FinnhubFetcher
+from .nse_fetcher import NSEFetcher
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,8 +22,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class USStockUniverseFetcher:
-    """Fetches and maintains the universe of all US-listed stocks."""
+class StockUniverseFetcher:
+    """Fetches and maintains the universe of NSE-listed stocks."""
 
     def __init__(self, cache_dir: str = "./data/cache"):
         """Initialize the universe fetcher.
@@ -35,288 +33,67 @@ class USStockUniverseFetcher:
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_file = self.cache_dir / "us_stock_universe.pkl"
-        logger.info("USStockUniverseFetcher initialized")
+        self.cache_file = self.cache_dir / "nse_stock_universe.pkl"
+        self.nse = NSEFetcher()
+        logger.info("StockUniverseFetcher initialized (NSE India)")
 
-    def _fetch_from_fmp(self, allow_finnhub_fallback: bool = True) -> pd.DataFrame:
-        """Fetch stock list from Financial Modeling Prep.
-
+    def fetch_universe(self, force_refresh: bool = False, include_etfs: bool = False) -> List[str]:
+        """Fetch the complete universe of NSE-listed stocks.
+        
         Args:
-            allow_finnhub_fallback: When True, fallback to Finnhub if FMP is unavailable.
-        """
-        try:
-            fmp = FMPFetcher()
-            if fmp.api_key:
-                stocks = fmp.fetch_stock_list()
-                if stocks:
-                    df = pd.DataFrame(stocks)
-                    if 'symbol' in df.columns:
-                        df = df[['symbol', 'name']].copy()
-
-                        # Filter out penny stocks (price < $1) if price data available
-                        if 'price' in pd.DataFrame(stocks).columns:
-                            prices = pd.DataFrame(stocks)['price']
-                            mask = prices.fillna(0) >= 1.0
-                            df = df[mask.values]
-
-                        logger.info(f"FMP universe: {len(df)} US stocks fetched")
-                        return df
-                else:
-                    logger.warning("FMP returned empty stock list. Trying Finnhub fallback...")
-            else:
-                logger.info("FMP API key not set. Trying Finnhub fallback for universe fetch...")
-
-            if allow_finnhub_fallback:
-                finnhub = FinnhubFetcher()
-                stocks = finnhub.fetch_us_stock_symbols()
-                if stocks:
-                    df = pd.DataFrame(stocks)
-                    if 'symbol' in df.columns and 'name' in df.columns:
-                        logger.info(f"Finnhub universe fallback: {len(df)} US stocks fetched")
-                        return df[['symbol', 'name']].copy()
-
-            logger.warning("Finnhub fallback returned empty stock list")
-            return pd.DataFrame()
-        except Exception as e:
-            logger.error(f"Error fetching universe from FMP/Finnhub: {e}")
-            return pd.DataFrame()
-
-    def _fetch_nasdaq_listed(self) -> pd.DataFrame:
-        """Fetch NASDAQ-listed stocks from NASDAQ FTP.
-
+            force_refresh: Ignore cache and fetch fresh
+            include_etfs: Whether to include ETFs in the universe
+            
         Returns:
-            DataFrame with NASDAQ stocks
+            List of stock ticker symbols (with .NS suffix for yfinance).
         """
-        try:
-            url = "ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt"
-            df = pd.read_csv(url, sep='|')
-            df = df[df['Symbol'].notna()]
-            df = df[df['Test Issue'] == 'N']  # Exclude test issues
-            df = df[['Symbol', 'Security Name']].copy()
-            df.columns = ['symbol', 'name']
-            logger.info(f"Fetched {len(df)} NASDAQ stocks")
-            return df
-        except Exception as e:
-            logger.error(f"Error fetching NASDAQ stocks: {e}")
-            return pd.DataFrame()
+        cache_key = "etf" if include_etfs else "equity"
+        cache_file = self.cache_dir / f"nse_{cache_key}_universe.pkl"
 
-    def _fetch_other_listed(self) -> pd.DataFrame:
-        """Fetch non-NASDAQ listed stocks (NYSE, AMEX, etc).
-
-        Returns:
-            DataFrame with other exchange stocks
-        """
-        try:
-            url = "ftp://ftp.nasdaqtrader.com/symboldirectory/otherlisted.txt"
-            df = pd.read_csv(url, sep='|')
-            df = df[df['ACT Symbol'].notna()]
-            df = df[df['Test Issue'] == 'N']  # Exclude test issues
-            df = df[['ACT Symbol', 'Security Name']].copy()
-            df.columns = ['symbol', 'name']
-            logger.info(f"Fetched {len(df)} NYSE/AMEX stocks")
-            return df
-        except Exception as e:
-            logger.error(f"Error fetching NYSE/AMEX stocks: {e}")
-            return pd.DataFrame()
-
-    def _filter_stocks(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Filter out unwanted tickers.
-
-        Removes:
-        - Tickers with special characters ($, ^, ., etc.)
-        - Test symbols
-        - Warrants, rights, units
-        - Preferred shares
-        - ETFs and funds (heuristic)
-
-        Args:
-            df: DataFrame with symbols
-
-        Returns:
-            Filtered DataFrame
-        """
-        if df.empty:
-            return df
-
-        initial_count = len(df)
-
-        # Remove symbols with special characters
-        df = df[~df['symbol'].str.contains(r'[\$\^\.\-]', regex=True, na=False)]
-
-        # Remove common suffixes for warrants, rights, units
-        suffixes = ['W', 'R', 'U', 'WS', 'WT']
-        for suffix in suffixes:
-            df = df[~df['symbol'].str.endswith(suffix, na=False)]
-
-        # Remove preferred shares (usually have letters after symbol)
-        # Keep only symbols that are 1-5 uppercase letters
-        df = df[df['symbol'].str.match(r'^[A-Z]{1,5}$', na=False)]
-
-        # Remove obvious ETFs and funds (heuristic based on name)
-        etf_keywords = [
-            'ETF', 'FUND', 'TRUST', 'INDEX', 'PORTFOLIO',
-            'SHARES', 'NOTES', 'BOND', 'TREASURY', 'ETN',
-            'REIT', 'INCOME', 'CLOSED END', 'ESTATE'
-        ]
-        etf_pattern = '|'.join(etf_keywords)
-        df = df[~df['name'].str.upper().str.contains(etf_pattern, na=False)]
-
-        filtered_count = len(df)
-        logger.info(f"Filtered {initial_count - filtered_count} stocks, kept {filtered_count}")
-
-        return df
-
-    def _fetch_from_finnhub(self) -> pd.DataFrame:
-        """Fetch stock list directly from Finnhub."""
-        try:
-            finnhub = FinnhubFetcher()
-            stocks = finnhub.fetch_us_stock_symbols()
-            if stocks:
-                df = pd.DataFrame(stocks)
-                if 'symbol' in df.columns and 'name' in df.columns:
-                    logger.info(f"Finnhub universe: {len(df)} US stocks fetched")
-                    return df[['symbol', 'name']].copy()
-            logger.warning("Finnhub returned empty stock list")
-            return pd.DataFrame()
-        except Exception as e:
-            logger.error(f"Error fetching universe from Finnhub: {e}")
-            return pd.DataFrame()
-
-    def fetch_universe(self, force_refresh: bool = False, source_preference: str = "auto") -> List[str]:
-        """Fetch the complete universe of US-listed stocks.
-
-        Args:
-            force_refresh: Force refresh even if cached data is recent
-            source_preference: Universe source strategy. One of:
-                - auto: FMP -> Finnhub fallback -> exchange FTP fallback
-                - exchange: NASDAQ FTP + other-listed FTP only
-                - fmp: FMP only
-                - finnhub: Finnhub only
-
-        Returns:
-            List of stock ticker symbols
-        """
-        # Check cache
-        source_preference = (source_preference or "auto").strip().lower()
-        valid_sources = {"auto", "exchange", "fmp", "finnhub"}
-        if source_preference not in valid_sources:
-            logger.warning(
-                "Unknown source_preference '%s'. Falling back to auto.",
-                source_preference,
-            )
-            source_preference = "auto"
-
-        if not force_refresh and self.cache_file.exists():
+        if not force_refresh and cache_file.exists():
             cache_age = datetime.now() - datetime.fromtimestamp(
-                self.cache_file.stat().st_mtime
+                cache_file.stat().st_mtime
             )
 
-            with open(self.cache_file, 'rb') as f:
-                cached_data = pickle.load(f)
-
-            requested_source = cached_data.get('metadata', {}).get('requested_source', 'auto')
-            if cache_age < timedelta(days=1) and requested_source == source_preference:
-                logger.info("Loading universe from cache")
-                logger.info(f"Loaded {len(cached_data['symbols'])} symbols from cache")
+            if cache_age < timedelta(days=1):
+                with open(cache_file, 'rb') as f:
+                    cached_data = pickle.load(f)
+                logger.info(f"Loaded {len(cached_data['symbols'])} NSE {cache_key} symbols from cache")
                 return cached_data['symbols']
-            if requested_source != source_preference:
-                logger.info(
-                    "Cached universe source '%s' does not match requested '%s'; refreshing.",
-                    requested_source,
-                    source_preference,
-                )
 
-        logger.info("Fetching fresh universe from exchanges...")
-
-        nasdaq_count = 0
-        other_count = 0
-        fmp_count = 0
-        source = "nasdaq_ftp"
-
-        if source_preference == "exchange":
-            logger.info("Using exchange-only universe source (NASDAQ FTP + other-listed FTP)")
-            nasdaq_df = self._fetch_nasdaq_listed()
-            other_df = self._fetch_other_listed()
-            nasdaq_count = len(nasdaq_df)
-            other_count = len(other_df)
-            all_stocks = pd.concat([nasdaq_df, other_df], ignore_index=True)
-            source = "exchange"
-        elif source_preference == "fmp":
-            logger.info("Using FMP-only universe source")
-            fmp_df = self._fetch_from_fmp(allow_finnhub_fallback=False)
-            all_stocks = fmp_df
-            source = "fmp"
-            fmp_count = len(fmp_df)
-        elif source_preference == "finnhub":
-            logger.info("Using Finnhub-only universe source")
-            all_stocks = self._fetch_from_finnhub()
-            source = "finnhub"
+        if include_etfs:
+            logger.info("Fetching NSE ETF list...")
+            symbols = self.nse.get_etfs()
         else:
-            # auto
-            fmp_df = self._fetch_from_fmp(allow_finnhub_fallback=True)
-            if not fmp_df.empty and len(fmp_df) > 1000:
-                logger.info(f"Using auto universe source ({len(fmp_df)} stocks)")
-                all_stocks = fmp_df
-                source = "fmp_or_finnhub"
-                fmp_count = len(fmp_df)
-            else:
-                logger.info("API universe unavailable or insufficient, falling back to exchange FTP...")
-                nasdaq_df = self._fetch_nasdaq_listed()
-                other_df = self._fetch_other_listed()
-                nasdaq_count = len(nasdaq_df)
-                other_count = len(other_df)
-                all_stocks = pd.concat([nasdaq_df, other_df], ignore_index=True)
-                source = "exchange_fallback"
+            logger.info("Fetching total equity market list from NSE CSV...")
+            symbols = self.nse.get_all_equity_stocks()
 
-        if all_stocks.empty:
-            logger.error("Failed to fetch any stocks")
-            return []
+        if not symbols:
+            # Fallback to index if CSV/ETF fails
+            logger.warning("Primary fetch failed, trying NIFTY 500 fallback...")
+            symbols = self.nse.get_index_stocks('NIFTY 500')
 
-        # Remove duplicates
-        all_stocks = all_stocks.drop_duplicates(subset=['symbol'])
-
-        # Filter unwanted symbols
-        all_stocks = self._filter_stocks(all_stocks)
-
-        # Sort by symbol
-        all_stocks = all_stocks.sort_values('symbol').reset_index(drop=True)
-
-        symbols = all_stocks['symbol'].tolist()
+        # Add .NS suffix for yfinance compatibility
+        yf_symbols = [f"{s}.NS" for s in symbols]
+        yf_symbols = sorted(list(set(yf_symbols)))
 
         # Cache the results
         cache_data = {
-            'symbols': symbols,
+            'symbols': yf_symbols,
             'fetch_date': datetime.now().isoformat(),
-            'count': len(symbols),
-            'metadata': {
-                'source': source,
-                'requested_source': source_preference,
-                'fmp_count': fmp_count,
-                'nasdaq_count': nasdaq_count,
-                'other_count': other_count,
-                'filtered_count': len(symbols)
-            }
+            'count': len(yf_symbols)
         }
 
-        with open(self.cache_file, 'wb') as f:
+        with open(cache_file, 'wb') as f:
             pickle.dump(cache_data, f)
 
-        logger.info(f"Cached {len(symbols)} symbols")
-        logger.info(f"Universe composition: {cache_data['metadata']}")
-
-        return symbols
+        logger.info(f"Cached {len(yf_symbols)} NSE symbols")
+        return yf_symbols
 
     def get_universe_info(self) -> Dict:
-        """Get information about the cached universe.
-
-        Returns:
-            Dict with universe metadata
-        """
+        """Get information about the cached universe."""
         if not self.cache_file.exists():
-            return {
-                'cached': False,
-                'count': 0
-            }
+            return {'cached': False, 'count': 0}
 
         with open(self.cache_file, 'rb') as f:
             cached_data = pickle.load(f)
@@ -329,6 +106,5 @@ class USStockUniverseFetcher:
             'cached': True,
             'count': cached_data['count'],
             'fetch_date': cached_data['fetch_date'],
-            'cache_age_hours': cache_age.total_seconds() / 3600,
-            'metadata': cached_data.get('metadata', {})
+            'cache_age_hours': cache_age.total_seconds() / 3600
         }

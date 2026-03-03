@@ -32,7 +32,7 @@ from .signal_engine import (
     format_signal_output
 )
 from .benchmark import (
-    analyze_spy_trend,
+    analyze_benchmark_trend,
     calculate_market_breadth,
     format_benchmark_summary,
     should_generate_signals
@@ -58,31 +58,27 @@ class QuantAnalysisEngine:
         self.fetcher = YahooFinanceFetcher(cache_dir=cache_dir)
         self.enhanced_fetcher = EnhancedFundamentalsFetcher()
         self.use_fmp = use_fmp
-        self.spy_data = None
-        self.spy_price = None
+        self.benchmark_data = None
+        self.benchmark_price = None
         logger.info(f"QuantAnalysisEngine initialized (FMP: {use_fmp})")
 
-    def fetch_spy_data(self) -> bool:
-        """Fetch SPY benchmark data.
-
-        Returns:
-            True if successful
-        """
+    def fetch_benchmark_data(self) -> bool:
+        """Fetch Nifty 50 benchmark data."""
         try:
-            logger.info("Fetching SPY data...")
-            spy_hist = self.fetcher.fetch_price_history('SPY', period='2y')
+            logger.info("Fetching Nifty 50 (^NSEI) data...")
+            nifty_hist = self.fetcher.fetch_price_history('^NSEI', period='2y')
 
-            if spy_hist.empty:
-                logger.error("Failed to fetch SPY data")
+            if nifty_hist.empty:
+                logger.error("Failed to fetch Nifty 50 data")
                 return False
 
-            self.spy_data = spy_hist
-            self.spy_price = spy_hist['Close'].iloc[-1]
-            logger.info(f"SPY data fetched: {len(spy_hist)} days, current price: ${self.spy_price:.2f}")
+            self.benchmark_data = nifty_hist
+            self.benchmark_price = nifty_hist['Close'].iloc[-1]
+            logger.info(f"Nifty 50 data fetched: {len(nifty_hist)} days, current price: {self.benchmark_price:.2f}")
             return True
 
         except Exception as e:
-            logger.error(f"Error fetching SPY data: {e}")
+            logger.error(f"Error fetching Nifty 50 data: {e}")
             return False
 
     def analyze_stock(self, ticker: str) -> Optional[Dict]:
@@ -109,10 +105,10 @@ class QuantAnalysisEngine:
             # Classify phase
             phase_info = classify_phase(price_data, current_price)
 
-            # Calculate relative strength vs SPY
+            # Calculate relative strength vs Nifty 50
             rs_series = calculate_relative_strength(
                 price_data['Close'],
-                self.spy_data['Close'],
+                self.benchmark_data['Close'],
                 period=63
             )
 
@@ -145,18 +141,18 @@ class QuantAnalysisEngine:
         """
         logger.info(f"Screening {len(tickers)} stocks...")
 
-        # Ensure SPY data is loaded
-        if self.spy_data is None:
-            if not self.fetch_spy_data():
-                logger.error("Cannot proceed without SPY data")
+        # Ensure Nifty 50 data is loaded
+        if self.benchmark_data is None:
+            if not self.fetch_benchmark_data():
+                logger.error("Cannot proceed without benchmark data")
                 return {
-                    'error': 'Failed to fetch SPY data',
+                    'error': 'Failed to fetch benchmark data',
                     'buys': [],
                     'sells': []
                 }
 
-        # Analyze SPY
-        spy_analysis = analyze_spy_trend(self.spy_data, self.spy_price)
+        # Analyze Benchmark
+        benchmark_analysis = analyze_benchmark_trend(self.benchmark_data, self.benchmark_price)
 
         # Analyze all stocks
         all_analyses = []
@@ -177,7 +173,7 @@ class QuantAnalysisEngine:
         breadth = calculate_market_breadth(phase_results)
 
         # Determine if we should generate signals
-        signal_recommendation = should_generate_signals(spy_analysis, breadth)
+        signal_recommendation = should_generate_signals(benchmark_analysis, breadth)
 
         # Score buy signals
         buy_candidates = []
@@ -224,7 +220,7 @@ class QuantAnalysisEngine:
 
         return {
             'timestamp': datetime.now().isoformat(),
-            'spy_analysis': spy_analysis,
+            'benchmark_analysis': benchmark_analysis,
             'breadth': breadth,
             'signal_recommendation': signal_recommendation,
             'buys': buy_candidates,
@@ -263,7 +259,7 @@ class QuantAnalysisEngine:
 
         # Benchmark Summary
         output.append(format_benchmark_summary(
-            results['spy_analysis'],
+            results['benchmark_analysis'],
             results['breadth']
         ))
 
@@ -280,7 +276,7 @@ class QuantAnalysisEngine:
                 output.append(f"BUY #{i}: {buy['ticker']} | Score: {buy['score']}/100")
                 output.append(f"{'#'*60}")
                 output.append(f"Phase: {buy['phase']}")
-                output.append(f"Breakout Price: ${buy['breakout_price']:.2f}" if buy['breakout_price'] else "Breakout Price: N/A")
+                output.append(f"Breakout Price: {buy['breakout_price']:.2f}" if buy['breakout_price'] else "Breakout Price: N/A")
 
                 # Details
                 details = buy.get('details', {})
@@ -322,7 +318,7 @@ class QuantAnalysisEngine:
                 output.append(f"SELL #{i}: {sell['ticker']} | Score: {sell['score']}/100 | Severity: {sell['severity'].upper()}")
                 output.append(f"{'#'*60}")
                 output.append(f"Phase: {sell['phase']}")
-                output.append(f"Breakdown Level: ${sell['breakdown_level']:.2f}" if sell['breakdown_level'] else "Breakdown Level: N/A")
+                output.append(f"Breakdown Level: {sell['breakdown_level']:.2f}" if sell['breakdown_level'] else "Breakdown Level: N/A")
 
                 # Details
                 details = sell.get('details', {})

@@ -53,8 +53,8 @@ class BatchStockProcessor:
         self.rate_limit_delay = rate_limit_delay
         self.batch_size = batch_size
 
-        self.spy_data = None
-        self.spy_price = None
+        self.benchmark_data = None
+        self.benchmark_price = None
 
         self.progress_file = self.results_dir / "batch_progress.pkl"
         self.current_results = []
@@ -106,27 +106,27 @@ class BatchStockProcessor:
         except Exception as e:
             logger.error(f"Error saving progress: {e}")
 
-    def fetch_spy_data(self) -> bool:
-        """Fetch SPY benchmark data.
+    def fetch_benchmark_data(self) -> bool:
+        """Fetch Nifty 50 benchmark data.
 
         Returns:
             True if successful
         """
         try:
-            logger.info("Fetching SPY data...")
-            spy_hist = self.fetcher.fetch_price_history('SPY', period='2y')
+            logger.info("Fetching Nifty 50 (^NSEI) data...")
+            nifty_hist = self.fetcher.fetch_price_history('^NSEI', period='2y')
 
-            if spy_hist.empty:
-                logger.error("Failed to fetch SPY data")
+            if nifty_hist.empty:
+                logger.error("Failed to fetch Nifty 50 data")
                 return False
 
-            self.spy_data = spy_hist
-            self.spy_price = spy_hist['Close'].iloc[-1]
-            logger.info(f"SPY data ready: {len(spy_hist)} days, price: ${self.spy_price:.2f}")
+            self.benchmark_data = nifty_hist
+            self.benchmark_price = nifty_hist['Close'].iloc[-1]
+            logger.info(f"Nifty 50 data ready: {len(nifty_hist)} days, price: {self.benchmark_price:.2f}")
             return True
 
         except Exception as e:
-            logger.error(f"Error fetching SPY data: {e}")
+            logger.error(f"Error fetching Nifty 50 data: {e}")
             return False
 
     def filter_tradable_stocks(
@@ -204,10 +204,10 @@ class BatchStockProcessor:
             if phase not in [1, 2, 3, 4]:
                 return None
 
-            # Calculate relative strength vs SPY
+            # Calculate relative strength vs Nifty 50
             rs_series = calculate_relative_strength(
                 price_data['Close'],
-                self.spy_data['Close'],
+                self.benchmark_data['Close'],
                 period=63
             )
 
@@ -261,9 +261,9 @@ class BatchStockProcessor:
         logger.info(f"Estimated time: {len(tickers) * self.rate_limit_delay / 3600:.1f} hours")
         logger.info("="*60)
 
-        # Load SPY data
-        if not self.fetch_spy_data():
-            return {'error': 'Failed to fetch SPY data'}
+        # Load benchmark data
+        if not self.fetch_benchmark_data():
+            return {'error': 'Failed to fetch Nifty 50 data'}
 
         # Load progress if resuming
         if resume:

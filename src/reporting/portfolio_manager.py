@@ -4,7 +4,7 @@ Features:
 - Ownership report (TXT)
 - Allocation CSV
 - Rebalance actions
-- Alpha tracking vs S&P 500
+- Alpha tracking vs Nifty 50
 """
 
 import logging
@@ -82,10 +82,10 @@ class PortfolioManager:
         for p in portfolio:
             cost_basis = p['quantity'] * p['average_buy_price']
             total_value += cost_basis
-            report.append(f"Ticker: {p['ticker']:<6} | Qty: {p['quantity']:<5} | Avg Price: ${p['average_buy_price']:<8.2f} | Cost: ${cost_basis:,.2f}")
+            report.append(f"Ticker: {p['ticker']:<6} | Qty: {p['quantity']:<5} | Avg Price: {p['average_buy_price']:<8.2f} | Cost: {cost_basis:,.2f}")
             
         report.append("-" * 60)
-        report.append(f"TOTAL PORTFOLIO COST BASIS: ${total_value:,.2f}")
+        report.append(f"TOTAL PORTFOLIO COST BASIS: {total_value:,.2f}")
         report.append("="*60)
         
         output_file = self.report_dir / f"ownership_report_{datetime.now().strftime('%Y%m%d')}.txt"
@@ -96,8 +96,8 @@ class PortfolioManager:
     def _generate_allocation_csv(self, buy_signals: List[Dict]):
         """Creates a CSV suggesting allocation for new buy signals."""
         allocations = []
-        # Target: Spend $10,000 across top 5 signals
-        total_budget = 10000
+        # Target: Allocate 50,000 INR across top 5 signals
+        total_budget = 50000
         budget_per_stock = total_budget / 5 if buy_signals else 0
         
         for s in buy_signals[:5]:
@@ -165,7 +165,7 @@ class PortfolioManager:
         logger.info(f"Rebalance actions saved to {output_file}")
 
     def _generate_alpha_report(self):
-        """Compares historical recommendations against S&P 500."""
+        """Compares historical recommendations against Nifty 50."""
         perf_data = self.db.get_recommendation_performance()
         if not perf_data:
             logger.info("No historical recommendations found for alpha report.")
@@ -173,15 +173,15 @@ class PortfolioManager:
 
         report = []
         report.append("="*60)
-        report.append(f"ALPHA TRACKER: RECOMMENDATIONS VS S&P 500")
+        report.append(f"ALPHA TRACKER: RECOMMENDATIONS VS NIFTY 50")
         report.append("="*60)
-        report.append(f"{'Ticker':<8} | {'Entry':<8} | {'Current':<8} | {'ROI %':<8} | {'Alpha vs SPY'}")
+        report.append(f"{'Ticker':<8} | {'Entry':<8} | {'Current':<8} | {'ROI %':<8} | {'Alpha vs Nifty 50'}")
         report.append("-" * 60)
 
-        # Get current SPY price
-        current_spy = self.price_service.get_current_price("SPY") or 0
-        if current_spy <= 0:
-            logger.warning("Unable to fetch SPY price for alpha report")
+        # Get current Nifty 50 price
+        current_bench = self.price_service.get_current_price("^NSEI") or 0
+        if current_bench <= 0:
+            logger.warning("Unable to fetch Nifty 50 price for alpha report")
             return
 
         total_alpha = 0
@@ -194,8 +194,8 @@ class PortfolioManager:
                     continue
                 
                 stock_roi = (current_price - r['entry_price']) / r['entry_price'] * 100
-                spy_roi = (current_spy - r['spy_entry']) / r['spy_entry'] * 100
-                alpha = stock_roi - spy_roi
+                bench_roi = (current_bench - r['benchmark_entry']) / r['benchmark_entry'] * 100
+                alpha = stock_roi - bench_roi
                 
                 total_alpha += alpha
                 count += 1
@@ -220,7 +220,7 @@ class PortfolioManager:
         date_str = datetime.now().strftime('%m/%d/%Y')
         
         # Risk settings
-        risk_per_trade_dollars = 500.0
+        risk_per_trade_unit = 5000.0
         
         for s in buy_signals[:10]: # Top 10 signals
             ticker = s['ticker']
@@ -241,10 +241,10 @@ class PortfolioManager:
             if entry_price <= 0:
                 continue
                 
-            # Calculation: Shares = $Risk / (Entry - Stop)
+            # Calculation: Shares = Risk_per_trade_unit / (Entry - Stop)
             risk_per_share = entry_price - stop_loss
             if risk_per_share > 0:
-                shares = int(risk_per_trade_dollars / risk_per_share)
+                shares = int(risk_per_trade_unit / risk_per_share)
             else:
                 shares = 0
                 
@@ -259,15 +259,15 @@ class PortfolioManager:
                 'Date': date_str,
                 'Ticker': ticker,
                 'Score': f"{score:.1f}",
-                'Entry $': f"{entry_price:.2f}",
-                'Stop $': f"{stop_loss:.2f}",
-                'Target $': f"{target_price:.2f}",
+                'Entry': f"{entry_price:.2f}",
+                'Stop': f"{stop_loss:.2f}",
+                'Target': f"{target_price:.2f}",
                 'Shares': shares,
-                'Risk $': f"{total_risk:.2f}",
+                'Risk': f"{total_risk:.2f}",
                 'R/R': f"{rr_ratio:.1f}",
                 'Exit Date': '',
-                'Exit $': '',
-                'P/L $': '',
+                'Exit': '',
+                'P/L': '',
                 'Notes': notes
             })
             

@@ -39,9 +39,9 @@ def fetch_quarterly_financials(ticker: str) -> Dict[str, any]:
 
             # Get quarterly financials - these are individual API calls, so delay between them
             quarterly_income = stock.quarterly_financials
-            time.sleep(0.3)
+            time.sleep(0.1)
             quarterly_balance = stock.quarterly_balance_sheet
-            time.sleep(0.3)
+            time.sleep(0.1)
             quarterly_cashflow = stock.quarterly_cashflow
 
             if quarterly_income.empty:

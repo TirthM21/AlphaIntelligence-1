@@ -110,7 +110,7 @@ class ETFUniverse:
                     "keywords": ["cyber", "security", "threat"],
                 },
             ],
-            "exclude_etfs": ["VOO", "SPY", "QQQ", "IWM", "DIA", "VTI"],
+            "exclude_etfs": ["NIFTYBEES.NS", "JUNIORBEES.NS", "SETFNIF50.NS", "SPY", "QQQ"],
             "filtering_rules": {
                 "min_aum_millions": 100,
                 "max_expense_ratio": 0.75,
@@ -330,7 +330,7 @@ class ETFUniverse:
 
             # Check AUM
             if etf.aum_millions < min_aum:
-                logger.debug(f"Skipping {etf.ticker} (AUM ${etf.aum_millions}M < ${min_aum}M)")
+                logger.debug(f"Skipping {etf.ticker} (AUM {etf.aum_millions}M < {min_aum}M)")
                 continue
 
             # Check expense ratio

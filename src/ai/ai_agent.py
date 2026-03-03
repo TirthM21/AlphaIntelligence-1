@@ -19,6 +19,7 @@ MODEL_KEY_ENV_MAP = {
     'z-ai/glm4.7': 'NVIDIA_API_KEY_GLM47',
     'z-ai/glm5': 'NVIDIA_API_KEY_GLM5',
     'deepseek-ai/deepseek-v3.2': 'NVIDIA_API_KEY_DEEPSEEK',
+    'moonshotai/kimi-k2.5': 'NVIDIA_API_KEY_KIMI',
 }
 
 class AIAgent:
@@ -35,11 +36,12 @@ class AIAgent:
             'z-ai/glm4.7',
             'z-ai/glm5',
             'deepseek-ai/deepseek-v3.2',
+            'moonshotai/kimi-k2.5',
         ]
-        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[3])
+        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[5])
         if self.model not in self.supported_models:
-            logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[3])
-            self.model = self.supported_models[3]
+            logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[5])
+            self.model = self.supported_models[5]
 
         self.api_key = (
             api_key
@@ -61,9 +63,9 @@ class AIAgent:
             self.max_retries = 1
 
         try:
-            self.max_tokens = int(os.getenv("NVIDIA_AI_MAX_TOKENS", "2500"))
+            self.max_tokens = int(os.getenv("NVIDIA_AI_MAX_TOKENS", "4096"))
         except (TypeError, ValueError):
-            self.max_tokens = 2500
+            self.max_tokens = 4096
 
         try:
             self.failure_threshold = max(1, int(os.getenv("NVIDIA_AI_FAILURE_THRESHOLD", "2")))
@@ -581,7 +583,7 @@ class AIAgent:
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature if temperature is not None else (0.1 if low_temp else 1.0),
-                top_p=0.95,
+                top_p=1.00,
                 max_tokens=self.max_tokens,
                 extra_body={"chat_template_kwargs": {"thinking": True}},
                 stream=False,

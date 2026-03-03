@@ -13,8 +13,6 @@ from dotenv import load_dotenv
 # Add project root to path
 sys.path.append(str(Path(__file__).parent))
 
-from src.data.fmp_fetcher import FMPFetcher
-from src.data.sec_fetcher import SECFetcher
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
 from src.ai.ai_agent import AIAgent
 from src.database.db_manager import DBManager
@@ -72,34 +70,8 @@ def run_test():
         logger.error(f"  Result: FAIL - {e}")
         test_results.append(("AI Agent", "FAIL", str(e)))
 
-    # 3. Test FMP Fetcher
-    try:
-        logger.info("[3/8] Testing FMPFetcher...")
-        fmp_key = os.getenv('FMP_API_KEY')
-        if fmp_key:
-            fmp = FMPFetcher(api_key=fmp_key)
-            data = fmp.fetch_income_statement("MSFT", limit=1)
-            if data:
-                logger.info("  Result: Success (Fetched MSFT data)")
-                test_results.append(("FMP API", "PASS", "Data fetched"))
-            else:
-                logger.error("  Result: FAIL (No data)")
-                test_results.append(("FMP API", "FAIL", "No data returned"))
-        else:
-            test_results.append(("FMP API", "SKIP", "No key"))
-    except Exception as e:
-        test_results.append(("FMP API", "FAIL", str(e)))
-
-    # 4. Test SEC Fetcher
-    try:
-        logger.info("[4/8] Testing SECFetcher...")
-        sec = SECFetcher(download_dir="./data/test_sec")
-        # Check cache/download logic
-        res = sec.download_latest_10q("NVDA")
-        logger.info(f"  Result: {res}")
-        test_results.append(("SEC Fetcher", "PASS", res))
-    except Exception as e:
-        test_results.append(("SEC Fetcher", "FAIL", str(e)))
+    # 3. Test FMP/SEC - Removed (Migrated to yfinance only)
+    test_results.append(("FMP/SEC API", "SKIP", "Removed"))
 
     # 5. Run Batch Scan (15 stocks)
     logger.info("[5/8] Running Scan for 15 Stocks...")
@@ -107,8 +79,7 @@ def run_test():
     
     processor = OptimizedBatchProcessor(
         max_workers=5,
-        rate_limit_delay=0.2,
-        use_fmp=True
+        rate_limit_delay=0.2
     )
     processor.clear_progress()
     
@@ -126,8 +97,7 @@ def run_test():
             current_price=analysis['current_price'],
             phase_info=analysis['phase_info'],
             rs_series=analysis['rs_series'],
-            fundamentals=analysis.get('quarterly_data'),
-            sec_status="Success (Mocked)"
+            fundamentals=analysis.get('quarterly_data')
         )
         buy_signals.append(sig)
     

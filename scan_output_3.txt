@@ -1,0 +1,354 @@
+2026-03-02 21:02:40,304 - src.reporting.newsletter_generator - WARNING - FinnhubFetcher unavailable
+2026-03-02 21:02:40,304 - src.reporting.newsletter_generator - WARNING - MarketauxFetcher unavailable
+2026-03-02 21:02:40,304 - src.reporting.newsletter_generator - WARNING - FredFetcher unavailable
+2026-03-02 21:02:42,450 - __main__ - INFO - Configuration: 3 workers ╫ 2.0 TPS = ~6.0 TPS effective
+2026-03-02 21:02:42,450 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only for India)
+2026-03-02 21:02:42,452 - src.data.nse_fetcher - INFO - NSEFetcher initialized
+2026-03-02 21:02:42,452 - src.data.universe_fetcher - INFO - StockUniverseFetcher initialized (NSE India)
+2026-03-02 21:02:42,452 - __main__ - INFO - Fetching stock universe...
+2026-03-02 21:02:42,452 - src.data.universe_fetcher - INFO - Fetching fresh universe from NSE...
+2026-03-02 21:02:43,309 - src.data.universe_fetcher - INFO - Cached 501 NSE symbols
+2026-03-02 21:02:43,309 - __main__ - INFO - Universe: 501 stocks (source preference: exchange)
+2026-03-02 21:02:43,310 - __main__ - INFO - LIMITED MODE: 5 stocks
+2026-03-02 21:02:43,310 - src.data.fetcher - INFO - YahooFinanceFetcher initialized with cache_dir: ./data/cache
+2026-03-02 21:02:43,310 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only for India)
+2026-03-02 21:02:43,310 - src.screening.optimized_batch_processor - INFO - OptimizedBatchProcessor initialized
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Workers: 3, Delay: 0.5s
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Effective rate: ~6.0 TPS
+2026-03-02 21:02:43,311 - __main__ - INFO - Using standard yfinance fundamentals (FMP disabled).
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - ============================================================
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - OPTIMIZED BATCH PROCESSING STARTED
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Tickers: 5
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Workers: 3
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Rate: ~6.0 TPS
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Est. time: 0.0 hours
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - ============================================================
+2026-03-02 21:02:43,311 - src.screening.optimized_batch_processor - INFO - Fetching Nifty 50 data...
+2026-03-02 21:02:43,311 - src.data.fetcher - INFO - Fetching price history for ^NSEI (period=1y, interval=1d)
+2026-03-02 21:02:44,784 - src.data.fetcher - INFO - Saved data to cache: ^NSEI_prices_1y_1d.pkl
+2026-03-02 21:02:44,785 - src.data.fetcher - INFO - Successfully fetched 247 price records for ^NSEI
+2026-03-02 21:02:44,786 - src.screening.optimized_batch_processor - INFO - Nifty 50 ready: 247 days, price: 24865.70
+2026-03-02 21:02:44,786 - src.screening.optimized_batch_processor - INFO - Processing 5 remaining tickers
+2026-03-02 21:02:44,786 - src.screening.optimized_batch_processor - INFO - \U0001f680 Pre-fetching prices for 5 tickers in batches of 500...
+2026-03-02 21:02:44,786 - src.screening.optimized_batch_processor - INFO -   Pre-fetch chunk 1/1
+2026-03-02 21:02:44,786 - src.data.fetcher - INFO - Batch fetching prices for 5 tickers (period=5y)
+2026-03-02 21:02:44,786 - src.data.fetcher - INFO - Requesting batch chunk 1: 5 tickers
+C:\Users\Tirtub\Desktop\Downloads\stock-screener-long-hold\src\data\fetcher.py:520: FutureWarning: YF.download() has changed argument auto_adjust default to True
+  data = yf.download(
+2026-03-02 21:02:45,545 - src.data.fetcher - INFO - Saved data to cache: 360ONE.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,547 - src.data.fetcher - INFO - Saved data to cache: 3MINDIA.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,552 - src.data.fetcher - INFO - Saved data to cache: AADHARHFC.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,555 - src.data.fetcher - INFO - Saved data to cache: AARTIIND.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,560 - src.data.fetcher - INFO - Saved data to cache: AAVAS.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,560 - src.screening.optimized_batch_processor - INFO - \u2705 Pre-fetching complete. Parallel analysis will now use disk cache.
+2026-03-02 21:02:45,571 - src.data.fetcher - INFO - Loaded data from cache: 360ONE.NS_prices_5y_1d.pkl
+2026-03-02 21:02:45,603 - src.data.enhanced_fundamentals - INFO - FUNDAMENTALS [360ONE.NS]: Source = yfinance
+2026-03-02 21:02:46,098 - src.data.fetcher - INFO - Loaded data from cache: 3MINDIA.NS_prices_5y_1d.pkl
+2026-03-02 21:02:46,113 - src.data.enhanced_fundamentals - INFO - FUNDAMENTALS [3MINDIA.NS]: Source = yfinance
+2026-03-02 21:02:46,584 - src.data.fetcher - INFO - Loaded data from cache: AADHARHFC.NS_prices_5y_1d.pkl
+2026-03-02 21:02:46,589 - src.screening.optimized_batch_processor - INFO - Progress: 1/5 (20.0%) | Rate: 1.0/sec | Filtered: 0.0% | Errors: 0.0% | ETA: 0:00:04
+2026-03-02 21:02:47,095 - src.data.fetcher - INFO - Loaded data from cache: AARTIIND.NS_prices_5y_1d.pkl
+2026-03-02 21:02:47,110 - src.data.enhanced_fundamentals - INFO - FUNDAMENTALS [AARTIIND.NS]: Source = yfinance
+2026-03-02 21:02:47,598 - src.data.fetcher - INFO - Loaded data from cache: AAVAS.NS_prices_5y_1d.pkl
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - ============================================================
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - OPTIMIZED BATCH PROCESSING COMPLETE
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Time: 0:00:02
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Processed: 5 tickers
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Analyzed: 5 stocks
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Filtered: 0 (0.0%)
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Actual rate: 1.68 TPS
+2026-03-02 21:02:48,542 - src.screening.optimized_batch_processor - INFO - Error rate: 0.0%
+2026-03-02 21:02:48,543 - src.screening.optimized_batch_processor - INFO - ============================================================
+2026-03-02 21:02:48,543 - __main__ - INFO - Generating signals...
+2026-03-02 21:02:49,208 - src.ai.ai_agent - INFO - AIAgent initialized using NVIDIA model=z-ai/glm5 timeout=45.0s max_retries=1 max_tokens=2500
+2026-03-02 21:02:49,208 - __main__ - INFO - Enriching top 1 candidates with SEC and AI analysis...
+2026-03-02 21:03:35,421 - openai._base_client - INFO - Retrying request to /chat/completions in 0.474132 seconds
+2026-03-02 21:04:20,927 - src.ai.ai_agent - ERROR - AI API call failed for model z-ai/glm5: Request timed out.
+2026-03-02 21:04:21,022 - src.data.enhanced_fundamentals - INFO - FUNDAMENTALS [AADHARHFC.NS]: Source = yfinance
+2026-03-02 21:04:23,698 - src.data.enhanced_fundamentals - INFO - FUNDAMENTALS [AAVAS.NS]: Source = yfinance
+2026-03-02 21:04:25,747 - __main__ - INFO - Report saved: data\daily_scans\optimized_scan_20260302_210425.txt
+2026-03-02 21:04:25,747 - __main__ - INFO - Recording signals and generating portfolio management reports...
+2026-03-02 21:04:32,519 - src.database.db_manager - INFO - Database connection established and tables verified.
+2026-03-02 21:04:33,328 - src.database.db_manager - ERROR - Failed to record recommendations: (psycopg2.errors.UndefinedColumn) column "benchmark_price_at_signal" of relation "recommendations" does not exist
+LINE 1: ..., signal_type, price_at_signal, score, timestamp, benchmark_...
+                                                             ^
+
+[SQL: INSERT INTO recommendations (ticker, signal_type, price_at_signal, score, timestamp, benchmark_price_at_signal) SELECT p0::VARCHAR, p1::VARCHAR, p2::FLOAT, p3::FLOAT, p4::TIMESTAMP WITHOUT TIME ZONE, p5::FLOAT FROM (VALUES (%(ticker__0)s, %(signal_ty ... 389 characters truncated ...  p4, p5, sen_counter) ORDER BY sen_counter RETURNING recommendations.id, recommendations.id AS id__1]
+[parameters: {'timestamp__0': datetime.datetime(2026, 3, 2, 15, 34, 32, 536147), 'benchmark_price_at_signal__0': 24865.69921875, 'score__0': 72.4, 'price_at_signal__0': 35675.0, 'signal_type__0': 'BUY', 'ticker__0': '3MINDIA.NS', 'timestamp__1': datetime.datetime(2026, 3, 2, 15, 34, 32, 536147), 'benchmark_price_at_signal__1': 24865.69921875, 'score__1': 75.0, 'price_at_signal__1': 1240.1, 'signal_type__1': 'SELL', 'ticker__1': 'AAVAS.NS', 'timestamp__2': datetime.datetime(2026, 3, 2, 15, 34, 32, 536147), 'benchmark_price_at_signal__2': 24865.69921875, 'score__2': 70.0, 'price_at_signal__2': 452.6, 'signal_type__2': 'SELL', 'ticker__2': 'AADHARHFC.NS'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:38,757 - src.database.db_manager - INFO - Database connection established and tables verified.
+2026-03-02 21:04:38,758 - src.reporting.portfolio_manager - INFO - Generating advanced portfolio reports...
+2026-03-02 21:04:38,812 - src.reporting.portfolio_manager - INFO - Ownership report saved to data\reports\ownership_report_20260302.txt
+2026-03-02 21:04:39,673 - src.reporting.portfolio_manager - INFO - Allocation plan saved to data\reports\allocation_plan_20260302.csv
+2026-03-02 21:04:39,688 - src.reporting.portfolio_manager - INFO - Rebalance actions saved to data\reports\rebalance_actions_20260302.txt
+2026-03-02 21:04:40,522 - src.reporting.portfolio_manager - ERROR - Failed to generate alpha tracker: (psycopg2.errors.UndefinedColumn) column recommendations.benchmark_price_at_signal does not exist
+LINE 1: ...endations.timestamp AS recommendations_timestamp, recommenda...
+                                                             ^
+
+[SQL: SELECT recommendations.id AS recommendations_id, recommendations.ticker AS recommendations_ticker, recommendations.signal_type AS recommendations_signal_type, recommendations.price_at_signal AS recommendations_price_at_signal, recommendations.score AS recommendations_score, recommendations.timestamp AS recommendations_timestamp, recommendations.benchmark_price_at_signal AS recommendations_benchmark_price_at_signal 
+FROM recommendations]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:40,529 - src.reporting.portfolio_manager - INFO - Swing trade tracker CSV saved to data\reports\trade_tracker_20260302.csv (Ready for Sheets import)
+2026-03-02 21:04:40,529 - __main__ - INFO - \U0001f3e6 Running AlphaIntelligence Capital performance tracker...
+2026-03-02 21:04:46,054 - src.database.db_manager - INFO - Database connection established and tables verified.
+C:\Users\Tirtub\Desktop\Downloads\stock-screener-long-hold\src\data\price_service.py:140: FutureWarning: YF.download() has changed argument auto_adjust default to True
+  data = yf.download(unresolved, period="2d", progress=False, threads=True)
+2026-03-02 21:04:47,530 - src.database.db_manager - ERROR - Failed to close position for AAVAS.NS: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.ticker = %(ticker_1)s AND positions.strategy = %(strategy_1)s AND positions.status = %(status_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'ticker_1': 'AAVAS.NS', 'strategy_1': 'DAILY', 'status_1': 'OPEN', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:48,322 - src.database.db_manager - ERROR - Failed to close position for AADHARHFC.NS: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.ticker = %(ticker_1)s AND positions.strategy = %(strategy_1)s AND positions.status = %(status_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'ticker_1': 'AADHARHFC.NS', 'strategy_1': 'DAILY', 'status_1': 'OPEN', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:49,080 - src.database.db_manager - ERROR - Failed to open position for 3MINDIA.NS: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.ticker = %(ticker_1)s AND positions.strategy = %(strategy_1)s AND positions.status = %(status_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'ticker_1': '3MINDIA.NS', 'strategy_1': 'DAILY', 'status_1': 'OPEN', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:49,328 - src.reporting.performance_tracker - INFO - \U0001f4ca Signal processing complete: 0 opened, 0 closed (DAILY)
+2026-03-02 21:04:49,845 - src.database.db_manager - ERROR - Failed to fetch open positions: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.status = %(status_1)s AND positions.strategy = %(strategy_1)s]
+[parameters: {'status_1': 'OPEN', 'strategy_1': 'DAILY'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:50,592 - src.database.db_manager - ERROR - Failed to fetch open positions: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.status = %(status_1)s AND positions.strategy = %(strategy_1)s]
+[parameters: {'status_1': 'OPEN', 'strategy_1': 'DAILY'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:51,338 - src.database.db_manager - ERROR - Failed to fetch closed positions: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.status = %(status_1)s AND positions.strategy = %(strategy_1)s ORDER BY positions.exit_date DESC 
+ LIMIT %(param_1)s]
+[parameters: {'status_1': 'CLOSED', 'strategy_1': 'DAILY', 'param_1': 500}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:52,086 - src.database.db_manager - ERROR - Failed to record daily performance: (psycopg2.errors.UndefinedColumn) column fund_performance.alpha_vs_benchmark does not exist
+LINE 1: ...ce.max_drawdown AS fund_performance_max_drawdown, fund_perfo...
+                                                             ^
+
+[SQL: SELECT fund_performance.id AS fund_performance_id, fund_performance.date AS fund_performance_date, fund_performance.total_pnl_pct AS fund_performance_total_pnl_pct, fund_performance.open_positions AS fund_performance_open_positions, fund_performance.closed_positions AS fund_performance_closed_positions, fund_performance.win_rate AS fund_performance_win_rate, fund_performance.avg_gain AS fund_performance_avg_gain, fund_performance.avg_loss AS fund_performance_avg_loss, fund_performance.best_trade AS fund_performance_best_trade, fund_performance.worst_trade AS fund_performance_worst_trade, fund_performance.sharpe_ratio AS fund_performance_sharpe_ratio, fund_performance.max_drawdown AS fund_performance_max_drawdown, fund_performance.alpha_vs_benchmark AS fund_performance_alpha_vs_benchmark, fund_performance.benchmark_return AS fund_performance_benchmark_return, fund_performance.strategy AS fund_performance_strategy 
+FROM fund_performance 
+WHERE fund_performance.date = %(date_1)s AND fund_performance.strategy = %(strategy_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'date_1': datetime.date(2026, 3, 2), 'strategy_1': 'DAILY', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:52,853 - src.database.db_manager - ERROR - Failed to fetch closed positions: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.status = %(status_1)s AND positions.strategy = %(strategy_1)s ORDER BY positions.exit_date DESC 
+ LIMIT %(param_1)s]
+[parameters: {'status_1': 'CLOSED', 'strategy_1': 'DAILY', 'param_1': 100}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:53,642 - src.database.db_manager - ERROR - Failed to fetch closed positions: (psycopg2.errors.UndefinedColumn) column positions.benchmark_entry_price does not exist
+LINE 1: ..., positions.exit_reason AS positions_exit_reason, positions....
+                                                             ^
+
+[SQL: SELECT positions.id AS positions_id, positions.ticker AS positions_ticker, positions.entry_price AS positions_entry_price, positions.entry_date AS positions_entry_date, positions.exit_price AS positions_exit_price, positions.exit_date AS positions_exit_date, positions.stop_loss AS positions_stop_loss, positions.signal_score AS positions_signal_score, positions.status AS positions_status, positions.pnl_pct AS positions_pnl_pct, positions.strategy AS positions_strategy, positions.exit_reason AS positions_exit_reason, positions.benchmark_entry_price AS positions_benchmark_entry_price, positions.benchmark_exit_price AS positions_benchmark_exit_price 
+FROM positions 
+WHERE positions.status = %(status_1)s AND positions.strategy = %(strategy_1)s ORDER BY positions.exit_date DESC 
+ LIMIT %(param_1)s]
+[parameters: {'status_1': 'CLOSED', 'strategy_1': 'DAILY', 'param_1': 5}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-03-02 21:04:53,886 - __main__ - INFO - \u2705 Performance tracker complete
+2026-03-02 21:04:53,886 - __main__ - INFO - Generating daily newsletter...
+2026-03-02 21:04:53,886 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only for India)
+2026-03-02 21:04:54,420 - src.ai.ai_agent - INFO - AIAgent initialized using NVIDIA model=z-ai/glm5 timeout=45.0s max_retries=1 max_tokens=2500
+2026-03-02 21:04:54,435 - __main__ - ERROR - Failed to generate newsletter: AttributeError: 'EnhancedFundamentalsFetcher' object has no attribute 'fmp_fetcher'
+2026-03-02 21:04:54,438 - __main__ - WARNING - Wrote degraded-mode fallback newsletter artifacts: data\newsletters\daily_newsletter_20260302_210454.md
+2026-03-02 21:04:54,448 - __main__ - INFO - Generating AI Deep-Dive Intelligence Report...
+2026-03-02 21:04:54,448 - AIReport - INFO - Starting AI Deep-Dive Report Generation...
+2026-03-02 21:04:54,928 - src.ai.ai_agent - INFO - AIAgent initialized using NVIDIA model=z-ai/glm5 timeout=45.0s max_retries=1 max_tokens=2500
+2026-03-02 21:04:54,928 - AIReport - INFO - Sending data to AI for deep-dive analysis...
+2026-03-02 21:05:40,829 - openai._base_client - INFO - Retrying request to /chat/completions in 0.376931 seconds
+2026-03-02 21:06:26,231 - src.ai.ai_agent - ERROR - AI API call failed for model z-ai/glm5: Request timed out.
+2026-03-02 21:06:26,235 - AIReport - INFO - Report successfully generated and saved to data\reports\quantum_intelligence_report_20260302_210626.md
+2026-03-02 21:06:26,235 - __main__ - INFO - ============================================================
+2026-03-02 21:06:26,235 - __main__ - INFO - SCAN COMPLETE
+2026-03-02 21:06:26,235 - __main__ - INFO - Time: 0.0 minutes
+2026-03-02 21:06:26,239 - __main__ - INFO - Actual TPS: 1.68
+2026-03-02 21:06:26,239 - __main__ - INFO - Buy signals: 1
+2026-03-02 21:06:26,239 - __main__ - INFO - Sell signals: 2
+2026-03-02 21:06:26,241 - __main__ - INFO - ============================================================
+================================================================================
+OPTIMIZED FULL MARKET SCAN - NSE INDIA STOCKS
+Scan Date: 2026-03-02
+Generated: 2026-03-02 21:04:25
+================================================================================
+
+SCANNING STATISTICS
+--------------------------------------------------------------------------------
+Total Universe: 5 stocks
+Analyzed: 5 stocks
+Processing Time: 0.0 minutes
+Actual TPS: 1.68
+≡ƒƒó Error Rate: 0.00%
+≡ƒƒó Buy Signals: 1
+≡ƒö┤ Sell Signals: 2
+
+
+============================================================
+BENCHMARK SUMMARY (NIFTY 50)
+============================================================
+
+≡ƒƒí Nifty 50 trend classification:
+  Phase: 1 - Base Building
+  Trend: Consolidating
+  Current Price: 24865.70
+  ≡ƒö┤ 50 SMA: 25695.26 (slope: -0.0288)
+  ≡ƒƒó 200 SMA: 25348.91 (slope: 0.0267)
+  ≡ƒƒó Confidence: 85%
+
+Market Breadth (n=5):
+  ≡ƒƒí Phase 1 (Base Building): 2 stocks (40.0%)
+  ≡ƒƒó Phase 2 (Uptrend): 1 stocks (20.0%)
+  ≡ƒƒí Phase 3 (Distribution): 0 stocks (0.0%)
+  ≡ƒö┤ Phase 4 (Downtrend): 2 stocks (40.0%)
+  ≡ƒö┤ Breadth Quality: Fair
+
+≡ƒƒí Market Regime: TRANSITIONAL / Uncertain
+
+Interpretation:
+  ≡ƒƒí Mixed/transitional market - be selective
+  ΓåÆ Focus on highest quality setups only
+============================================================
+
+
+================================================================================
+≡ƒƒó TOP BUY SIGNALS (Score >= 70) - 1 Total
+================================================================================
+
+
+################################################################################
+≡ƒƒó BUY #1: 3MINDIA.NS | Score: 72.4/110
+################################################################################
+Phase: 2
+≡ƒƒó Entry Quality: Good
+Stop Loss: 34604.75
+≡ƒƒó Risk/Reward: 6.7:1 (Risk 1070.25, Reward 7135.00)
+≡ƒƒí RS: 0.217
+≡ƒƒó VCP: 11 contractions: 2.8% ΓåÆ 9.5% ΓåÆ 4.9% ΓåÆ 12.2% (quality: 61/100)
+
+Key Reasons:
+  ΓÇó Weak Stage 2: 0.9% above 50 SMA
+  ΓÇó SMAs rising strongly (50:0.089, 200:0.113)
+  ΓÇó ≡ƒƒí Revenue: 3Q avg 4.1% QoQ (9.7% ΓåÆ 0.0% ΓåÆ 2.7%)
+  ΓÇó ≡ƒö┤ EPS: -146% YoY
+  ΓÇó Inventory neutral (1.7% QoQ)
+  ΓÇó Volume slightly heavier on up days (ratio 1.21)
+  ΓÇó Γ£ô Strong RS: 0.217 (outperforming Nifty 50)
+
+============================================================
+FUNDAMENTAL SNAPSHOT - 3MINDIA.NS
+============================================================
+Γ£ô Revenue: Growing well (YoY: +10.6%, QoQ: +2.7%)
+  QoQ Trend (last 4Q): -1.9% ΓåÆ +9.7% ΓåÆ +0.0% ΓåÆ +2.7%
+Γ£ù EPS: DECLINING (YoY: -146.4%, QoQ: -134.9%)
+  QoQ Trend (last 4Q): -15.0% ΓåÆ N/A ΓåÆ N/A ΓåÆ -134.9%
+ΓÇó Margins: Flat (42.5%, -0.8pp QoQ)
+ΓÇó Inventory: Slight increase (+1.7% QoQ, ratio: 0.53)
+
+Overall Assessment:
+ΓÜá Some concerns: EPS declining
+Γ£ù Fundamentals CONTRADICT technical breakout
+
+
+
+================================================================================
+≡ƒö┤ TOP SELL SIGNALS (Score >= 60) - 2 Total
+================================================================================
+
+
+################################################################################
+≡ƒö┤ SELL #1: AAVAS.NS | Score: 75/110
+################################################################################
+Phase: 4 | ≡ƒö┤ Severity: HIGH
+Breakdown: 1398.38
+≡ƒƒí RS: -0.098
+
+Sell Reasons:
+  ΓÇó In Phase 4 (Downtrend)
+  ΓÇó Broke below 50 SMA by 11.3%
+  ΓÇó 50 SMA declining (slope: -0.3142)
+  ΓÇó Low volume breakdown: 1.0x
+  ΓÇó Weak RS rollover: -0.10
+
+============================================================
+FUNDAMENTAL SNAPSHOT - AAVAS.NS
+============================================================
+Γ£ô Revenue: Growing well (YoY: +11.9%, QoQ: +1.9%)
+  QoQ Trend (last 4Q): -20.4% ΓåÆ +33.5% ΓåÆ +3.3% ΓåÆ +1.9%
+Γ£ô EPS: Growing (YoY: +15.6%, QoQ: +3.7%)
+  QoQ Trend (last 4Q): N/A ΓåÆ N/A ΓåÆ +17.8% ΓåÆ +3.7%
+Γ£ô Margins: EXPANDING (35.1%, +1.3pp QoQ)
+
+Overall Assessment:
+Γ£ô Fundamentals SUPPORT technical breakout
+
+
+################################################################################
+≡ƒö┤ SELL #2: AADHARHFC.NS | Score: 70/110
+################################################################################
+Phase: 4 | ≡ƒö┤ Severity: HIGH
+Breakdown: 476.43
+≡ƒƒó RS: 0.015
+
+Sell Reasons:
+  ΓÇó In Phase 4 (Downtrend)
+  ΓÇó Broke below 50 SMA by 5.0%
+  ΓÇó 50 SMA declining (slope: -0.0686)
+  ΓÇó Low volume breakdown: 0.7x
+  ΓÇó RS still positive: 0.01
+
+============================================================
+FUNDAMENTAL SNAPSHOT - AADHARHFC.NS
+============================================================
+Γ£ô Revenue: Growing well (YoY: +17.9%, QoQ: +4.2%)
+  QoQ Trend (last 4Q): -7.5% ΓåÆ +16.9% ΓåÆ +4.7% ΓåÆ +4.2%
+Γ£ô EPS: Growing (YoY: +17.3%, QoQ: +5.5%)
+  QoQ Trend (last 4Q): N/A ΓåÆ N/A ΓåÆ +12.3% ΓåÆ +5.5%
+Γ£ô Margins: EXPANDING (45.5%, +1.8pp QoQ)
+
+Overall Assessment:
+Γ£ô Fundamentals SUPPORT technical breakout
+
+
+
+================================================================================
+END OF SCAN
+================================================================================
+
+
+SUCCESS: AI Report generated at data\reports\quantum_intelligence_report_20260302_210626.md

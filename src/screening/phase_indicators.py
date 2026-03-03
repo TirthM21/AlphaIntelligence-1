@@ -3,7 +3,7 @@
 This module implements all technical indicators required for the Phase system:
 - Phase classification (1-4)
 - SMA calculations with slope analysis
-- Relative Strength vs SPY
+- Relative Strength vs Nifty 50 (^NSEI)
 - Volatility contraction detection
 - Breakout detection
 - Volume analysis
@@ -66,55 +66,53 @@ def calculate_slope(series: pd.Series, periods: int = 20) -> float:
     return slope_pct
 
 
-def calculate_relative_strength(stock_prices: pd.Series, spy_prices: pd.Series,
+def calculate_relative_strength(stock_prices: pd.Series, benchmark_prices: pd.Series,
                                   period: int = 63) -> pd.Series:
-    """Calculate Relative Strength vs SPY.
+    """Calculate Relative Strength vs Benchmark (Nifty 50).
 
-    RS = (Stock Price / SPY Price) * 100
+    RS = (Stock Price / Benchmark Price) * 100
 
     Args:
         stock_prices: Stock closing prices
-        spy_prices: SPY closing prices
+        benchmark_prices: Benchmark closing prices (^NSEI)
         period: Period for RS calculation (default 63 = ~3 months)
 
     Returns:
         Series of RS values
     """
-    if len(stock_prices) == 0 or len(spy_prices) == 0:
+    if len(stock_prices) == 0 or len(benchmark_prices) == 0:
         return pd.Series([np.nan] * len(stock_prices), index=stock_prices.index)
 
     # Normalize indexes to timezone-naive DatetimeIndex to avoid comparison errors
-    # yfinance sometimes returns timezone-aware data, sometimes naive, sometimes RangeIndex
     stock_prices = stock_prices.copy()
-    spy_prices = spy_prices.copy()
+    benchmark_prices = benchmark_prices.copy()
 
     # Ensure both have DatetimeIndex (not RangeIndex)
     if not isinstance(stock_prices.index, pd.DatetimeIndex):
         logger.warning(f"Stock has non-DatetimeIndex: {type(stock_prices.index)}")
         return pd.Series([np.nan] * len(stock_prices), index=stock_prices.index)
 
-    if not isinstance(spy_prices.index, pd.DatetimeIndex):
-        logger.warning(f"SPY has non-DatetimeIndex: {type(spy_prices.index)}")
+    if not isinstance(benchmark_prices.index, pd.DatetimeIndex):
+        logger.warning(f"Benchmark has non-DatetimeIndex: {type(benchmark_prices.index)}")
         return pd.Series([np.nan] * len(stock_prices), index=stock_prices.index)
 
     # Remove timezone info if present (convert to timezone-naive)
     if stock_prices.index.tz is not None:
         stock_prices.index = stock_prices.index.tz_localize(None)
 
-    if spy_prices.index.tz is not None:
-        spy_prices.index = spy_prices.index.tz_localize(None)
+    if benchmark_prices.index.tz is not None:
+        benchmark_prices.index = benchmark_prices.index.tz_localize(None)
 
-    # Align the series by DATE (not position) - stocks and SPY trade on same days
-    # Use reindex to align SPY to stock dates, then forward fill any gaps
-    spy_aligned = spy_prices.reindex(stock_prices.index, method='ffill')
+    # Align the series by DATE (not position)
+    benchmark_aligned = benchmark_prices.reindex(stock_prices.index, method='ffill')
 
     # Check if we have valid aligned data
-    if spy_aligned.isna().all():
-        logger.warning("SPY alignment failed - all NaN after reindex")
+    if benchmark_aligned.isna().all():
+        logger.warning("Benchmark alignment failed - all NaN after reindex")
         return pd.Series([np.nan] * len(stock_prices), index=stock_prices.index)
 
     # Calculate RS
-    rs = (stock_prices / spy_aligned) * 100
+    rs = (stock_prices / benchmark_aligned) * 100
 
     # Fill any remaining NaN with forward fill
     rs = rs.ffill()

@@ -24,10 +24,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from src.data.universe_fetcher import USStockUniverseFetcher
+from src.data.universe_fetcher import StockUniverseFetcher
 from src.screening.batch_processor import BatchStockProcessor
 from src.screening.benchmark import (
-    analyze_spy_trend,
+    analyze_benchmark_trend,
     calculate_market_breadth,
     format_benchmark_summary,
     should_generate_signals
@@ -47,7 +47,7 @@ def save_daily_report(
     results: dict,
     buy_signals: list,
     sell_signals: list,
-    spy_analysis: dict,
+    benchmark_analysis: dict,
     breadth: dict,
     output_dir: str = "./data/daily_scans"
 ):
@@ -57,7 +57,7 @@ def save_daily_report(
         results: Batch processing results
         buy_signals: List of buy signals
         sell_signals: List of sell signals
-        spy_analysis: SPY analysis
+        benchmark_analysis: Nifty 50 analysis
         breadth: Market breadth
         output_dir: Output directory
     """
@@ -70,7 +70,7 @@ def save_daily_report(
     output = []
 
     output.append("="*80)
-    output.append("FULL MARKET SCAN - ALL US-LISTED STOCKS")
+    output.append("FULL MARKET SCAN - NSE INDIA STOCKS")
     output.append(f"Scan Date: {date_str}")
     output.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S %Z')}")
     output.append("="*80)
@@ -88,7 +88,7 @@ def save_daily_report(
     output.append("")
 
     # Benchmark summary
-    output.append(format_benchmark_summary(spy_analysis, breadth))
+    output.append(format_benchmark_summary(benchmark_analysis, breadth))
     output.append("")
 
     # Top buy signals
@@ -108,7 +108,7 @@ def save_daily_report(
             output.append(f"Phase: {signal['phase']}")
 
             if signal.get('breakout_price'):
-                output.append(f"Breakout Price: ${signal['breakout_price']:.2f}")
+                output.append(f"Breakout Price: {signal['breakout_price']:.2f}")
 
             details = signal.get('details', {})
             if 'rs_slope' in details:
@@ -155,7 +155,7 @@ def save_daily_report(
             output.append(f"Phase: {signal['phase']}")
 
             if signal.get('breakdown_level'):
-                output.append(f"Breakdown Level: ${signal['breakdown_level']:.2f}")
+                output.append(f"Breakdown Level: {signal['breakdown_level']:.2f}")
 
             details = signal.get('details', {})
             if 'rs_slope' in details:
@@ -209,7 +209,7 @@ def save_daily_report(
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description='Full Market Scanner - All US-Listed Stocks'
+        description='Full Market Scanner - NSE India Stocks'
     )
     parser.add_argument(
         '--resume',
@@ -225,13 +225,13 @@ def main():
         '--min-price',
         type=float,
         default=5.0,
-        help='Minimum stock price (default: $5.00)'
+        help='Minimum stock price (default: 5.00)'
     )
     parser.add_argument(
         '--max-price',
         type=float,
         default=10000.0,
-        help='Maximum stock price (default: $10,000)'
+        help='Maximum stock price (default: 10,000)'
     )
     parser.add_argument(
         '--min-volume',
@@ -259,7 +259,7 @@ def main():
     args = parser.parse_args()
 
     logger.info("="*80)
-    logger.info("FULL MARKET SCANNER - ALL US-LISTED STOCKS")
+    logger.info("FULL MARKET SCANNER - NSE INDIA STOCKS")
     logger.info(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("="*80)
 
@@ -272,7 +272,7 @@ def main():
 
     try:
         # Initialize components
-        universe_fetcher = USStockUniverseFetcher()
+        universe_fetcher = StockUniverseFetcher()
         processor = BatchStockProcessor(rate_limit_delay=args.rate_limit)
 
         # Clear progress if requested
@@ -281,7 +281,7 @@ def main():
             logger.info("Progress cleared - starting fresh")
 
         # Fetch stock universe
-        logger.info("Fetching US stock universe...")
+        logger.info("Fetching NSE stock universe...")
         tickers = universe_fetcher.fetch_universe()
 
         if not tickers:
@@ -308,13 +308,13 @@ def main():
             logger.error(f"Processing failed: {results['error']}")
             sys.exit(1)
 
-        # Analyze SPY and calculate breadth
+        # Analyze Nifty 50 and calculate breadth
         logger.info("Calculating market metrics...")
-        spy_analysis = analyze_spy_trend(processor.spy_data, processor.spy_price)
+        benchmark_analysis = analyze_benchmark_trend(processor.benchmark_data, processor.benchmark_price)
         breadth = calculate_market_breadth(results['phase_results'])
 
         # Determine if we should generate signals
-        signal_rec = should_generate_signals(spy_analysis, breadth)
+        signal_rec = should_generate_signals(benchmark_analysis, breadth)
 
         # Score buy signals
         buy_signals = []
@@ -369,7 +369,7 @@ def main():
             results,
             buy_signals,
             sell_signals,
-            spy_analysis,
+            benchmark_analysis,
             breadth
         )
 

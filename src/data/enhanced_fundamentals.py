@@ -1,23 +1,16 @@
-"""Enhanced fundamentals wrapper that intelligently uses FMP + yfinance.
+"""Enhanced fundamentals wrapper for Indian stocks using yfinance.
 
 This module provides a unified interface for fetching quarterly fundamentals:
-- Tries FMP first (if API key available) for net margins, operating margins, detailed inventory
-- Falls back to yfinance if FMP unavailable or rate limited
+- Uses yfinance for all data fetching
 - Caches results to minimize API calls
-
-Strategy:
-- Use FMP for top buy candidates (detailed analysis)
-- Use yfinance for initial screening (fast, no rate limits)
 """
 
 import logging
+import json
 import os
-from datetime import datetime
+from pathlib import Path
+from datetime import datetime, timedelta
 from typing import Dict, Optional
-
-from .sec_fetcher import SECFetcher
-from .fmp_fetcher import FMPFetcher
-from .finnhub_fetcher import FinnhubFetcher
 from .fundamentals_fetcher import (
     create_fundamental_snapshot, 
     analyze_fundamentals_for_signal,
@@ -27,306 +20,97 @@ from .fundamentals_fetcher import (
 logger = logging.getLogger(__name__)
 
 class EnhancedFundamentalsFetcher:
-    """Unified fundamentals fetcher using FMP + yfinance + SEC Edgar."""
+    """Fundamentals fetcher for Indian stocks using yfinance."""
 
-    def __init__(self):
-        """Initialize fetcher with FMP if API key available."""
-        self.fmp_available = False
-        self.fmp_fetcher = None
-        self.sec_fetcher = SECFetcher()
-        self.finnhub_fetcher = FinnhubFetcher()
+    def __init__(self, cache_dir: str = "./data/fundamentals_cache"):
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_expiry_days = 30 # Cache fundamentals for 30 days
+        logger.info(f"EnhancedFundamentalsFetcher initialized (yfinance-only, cache_dir={cache_dir})")
 
-        # Check if FMP API key is available
-        fmp_api_key = os.getenv('FMP_API_KEY')
-        if fmp_api_key:
-            try:
-                self.fmp_fetcher = FMPFetcher(api_key=fmp_api_key)
-                self.fmp_available = True
-                logger.info("FMP available - will use for enhanced fundamentals")
-            except Exception as e:
-                logger.warning(f"FMP initialization failed: {e}. Using yfinance only.")
-        else:
-            logger.info("FMP_API_KEY not set - using yfinance only")
+    def _get_cache_path(self, ticker: str) -> Path:
+        """Get cache file path."""
+        return self.cache_dir / f"{ticker}_yfinance_fundamentals.json"
 
-        self.fmp_daily_limit = 250
+    def _is_cache_valid(self, cache_path: Path) -> bool:
+        """Check if cache is valid."""
+        if not cache_path.exists():
+            return False
+        
+        file_modified = datetime.fromtimestamp(cache_path.stat().st_mtime)
+        expiry_time = datetime.now() - timedelta(days=self.cache_expiry_days)
+        return file_modified > expiry_time
+
+    def is_fundamentals_cached(self, ticker: str) -> bool:
+        """Check if fundamentals are cached."""
+        return self._is_cache_valid(self._get_cache_path(ticker))
 
     def fetch_quarterly_data(
         self,
-        ticker: str,
-        use_fmp: bool = False
+        ticker: str
     ) -> Dict[str, any]:
-        """Fetch quarterly financial data.
+             
+        cache_path = self._get_cache_path(ticker)
+        if self._is_cache_valid(cache_path):
+            try:
+                with open(cache_path, 'r', encoding='utf-8') as f:
+                    logger.debug(f"FUNDAMENTALS [{ticker}]: Loading from cache")
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load fundamental cache for {ticker}: {e}")
 
-        Args:
-            ticker: Stock ticker
-            use_fmp: If True and FMP available, use FMP for detailed data
-
-        Returns:
-            Dict with quarterly financial metrics
-        """
-        # If FMP requested and available, use it
-        if use_fmp and self.fmp_available:
-            usage_stats = self.fmp_fetcher.get_usage_stats() if self.fmp_fetcher else {}
-            if usage_stats.get('attempted_calls', 0) < self.fmp_daily_limit:
-                try:
-                    # Fetch basic + advanced (DCF/Insider)
-                    data = self.fmp_fetcher.fetch_comprehensive_fundamentals(ticker, include_advanced=True)
-
-                    if data and data.get('income_statement'):
-                        logger.info(f"FUNDAMENTALS [{ticker}]: Source = FMP (Enhanced)")
-                        return self._convert_fmp_to_standard(data)
-                    else:
-                        logger.warning(f"FMP returned no data for {ticker}, falling back to yfinance")
-                except Exception as e:
-                    logger.warning(f"FMP fetch failed for {ticker}: {e}. Using yfinance.")
-            else:
-                logger.warning(f"FMP daily limit reached ({self.fmp_daily_limit}). Using yfinance.")
-
-        # Finnhub fallback before yfinance
-        finnhub_data = self._fetch_from_finnhub(ticker)
-        if finnhub_data:
-            logger.info(f"FUNDAMENTALS [{ticker}]: Source = Finnhub (Fallback)")
-            return finnhub_data
-
-        # Fall back to yfinance
-        logger.info(f"FUNDAMENTALS [{ticker}]: Source = yfinance (Standard)")
-        return fetch_quarterly_financials(ticker)
-
-    def _fetch_from_finnhub(self, ticker: str) -> Dict[str, any]:
-        """Fetch lightweight fallback fundamentals from Finnhub quote/metrics."""
-        if not self.finnhub_fetcher or not self.finnhub_fetcher.api_key:
-            return {}
-
-        try:
-            quote = self.finnhub_fetcher._safe_get('quote', {'symbol': ticker})
-            metrics = self.finnhub_fetcher._safe_get('stock/metric', {'symbol': ticker, 'metric': 'all'})
-            metric_data = metrics.get('metric', {}) if isinstance(metrics, dict) else {}
-
-            if not quote and not metric_data:
-                return {}
-
-            return {
-                'ticker': ticker,
-                'fetch_date': datetime.now().isoformat(),
-                'data_source': 'finnhub',
-                'current_price': quote.get('c') if isinstance(quote, dict) else None,
-                'week_52_high': metric_data.get('52WeekHigh'),
-                'week_52_low': metric_data.get('52WeekLow'),
-                'pe_ratio': metric_data.get('peNormalizedAnnual') or metric_data.get('peTTM'),
-                'pb_ratio': metric_data.get('pbQuarterly'),
-                'market_cap': metric_data.get('marketCapitalization')
-            }
-        except Exception as e:
-            logger.warning(f"Finnhub fallback failed for {ticker}: {e}")
-            return {}
-
-    def download_sec_filing(self, ticker: str, filing_type: str = '10-Q') -> str:
-        """Download latest SEC filing."""
-        if filing_type == '10-Q':
-            return self.sec_fetcher.download_latest_10q(ticker)
-        elif filing_type == '10-K':
-            return self.sec_fetcher.download_latest_10k(ticker)
-        return "Invalid filing type"
-
-    def _convert_fmp_to_standard(self, fmp_data: Dict) -> Dict[str, any]:
-        """Convert FMP data format to standard format used by signal engine."""
-        if not fmp_data or not fmp_data.get('income_statement'):
-            return {}
-
-        income = fmp_data.get('income_statement', [])
-        balance = fmp_data.get('balance_sheet', [])
+        logger.info(f"FUNDAMENTALS [{ticker}]: Fetching fresh from yfinance")
+        data = fetch_quarterly_financials(ticker)
         
-        # Convert FMP data to standard format
-        result = self._standard_conversion_logic(fmp_data)
-        
-        # Attach advanced data if available
-        if 'dcf' in fmp_data:
-            result['dcf'] = fmp_data['dcf']
-        if 'insider_trading' in fmp_data:
-            result['insider_trading'] = fmp_data['insider_trading']
-            
-        return result
+        if data:
+            try:
+                # Convert keys to strings (Timestamp objects cannot be JSON keys)
+                serializable_data = self._make_json_serializable(data)
+                with open(cache_path, 'w', encoding='utf-8') as f:
+                    json.dump(serializable_data, f, indent=2, default=str)
+            except Exception as e:
+                logger.warning(f"Failed to save fundamental cache for {ticker}: {e}")
+                
+        return data
 
-    def _standard_conversion_logic(self, fmp_data: Dict) -> Dict[str, any]:
-        """Internal helper to reuse the original conversion logic since I can't easily call super() or original method in this overwrite."""
-        income = fmp_data.get('income_statement', [])
-        balance = fmp_data.get('balance_sheet', [])
+    def _make_json_serializable(self, data: any) -> any:
+        """Recursively convert dictionary keys (like Timestamps) to strings and NaNs to None for JSON."""
+        import math
+        if isinstance(data, dict):
+            return {str(k): self._make_json_serializable(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._make_json_serializable(item) for item in data]
+        elif isinstance(data, float) and math.isnan(data):
+            return None
+        else:
+            return data
 
-        if len(income) == 0: return {}
-
-        result = {
-            'ticker': fmp_data['ticker'],
-            'fetch_date': fmp_data['fetch_date'],
-            'data_source': 'fmp'
-        }
-
-        # Latest quarter
-        latest_income = income[0]
-        prev_income = income[1] if len(income) > 1 else {}
-        latest_balance = balance[0] if len(balance) > 0 else {}
-        prev_balance = balance[1] if len(balance) > 1 else {}
-
-        # Revenue
-        revenue = latest_income.get('revenue', 0)
-        prev_revenue = prev_income.get('revenue', 0)
-
-        if revenue:
-            result['latest_revenue'] = revenue
-            if prev_revenue:
-                result['revenue_qoq_change'] = ((revenue - prev_revenue) / prev_revenue * 100)
-
-        # YoY revenue (4 quarters ago)
-        if len(income) >= 5:
-            yoy_revenue = income[4].get('revenue', 0)
-            if yoy_revenue:
-                result['revenue_yoy_change'] = ((revenue - yoy_revenue) / yoy_revenue * 100)
-
-        # EPS
-        eps = latest_income.get('eps', 0)
-        prev_eps = prev_income.get('eps', 0)
-
-        if eps:
-            result['latest_eps'] = eps
-            if prev_eps and prev_eps != 0:
-                result['eps_qoq_change'] = ((eps - prev_eps) / abs(prev_eps) * 100)
-
-        # YoY EPS
-        if len(income) >= 5:
-            yoy_eps = income[4].get('eps', 0)
-            if yoy_eps and yoy_eps != 0:
-                result['eps_yoy_change'] = ((eps - yoy_eps) / abs(yoy_eps) * 100)
-
-        # NET MARGIN (not available in yfinance!)
-        net_margin = latest_income.get('netIncomeRatio', 0) * 100
-        prev_net_margin = prev_income.get('netIncomeRatio', 0) * 100
-
-        result['net_margin'] = round(net_margin, 2)
-        result['net_margin_change'] = round(net_margin - prev_net_margin, 2)
-
-        # OPERATING MARGIN (not available in yfinance!)
-        operating_margin = latest_income.get('operatingIncomeRatio', 0) * 100
-        result['operating_margin'] = round(operating_margin, 2)
-
-        # Gross margin
-        gross_margin = latest_income.get('grossProfitRatio', 0) * 100
-        prev_gross_margin = prev_income.get('grossProfitRatio', 0) * 100
-
-        result['gross_margin'] = round(gross_margin, 2)
-        result['margin_change'] = round(gross_margin - prev_gross_margin, 2)
-
-        # Inventory (detailed in FMP)
-        inventory = latest_balance.get('inventory', 0)
-        prev_inventory = prev_balance.get('inventory', 0)
-
-        if inventory:
-            result['latest_inventory'] = inventory
-            if prev_inventory:
-                inv_change = ((inventory - prev_inventory) / prev_inventory * 100)
-                result['inventory_qoq_change'] = round(inv_change, 2)
-
-            if revenue:
-                result['inventory_to_sales_ratio'] = round(inventory / revenue, 3)
-
-        return result
 
     def create_snapshot(
         self,
         ticker: str,
-        quarterly_data: Optional[Dict] = None,
-        use_fmp: bool = False
+        quarterly_data: Optional[Dict] = None
     ) -> str:
         """Create fundamental snapshot."""
         # Fetch data if not provided
         if not quarterly_data:
-            quarterly_data = self.fetch_quarterly_data(ticker, use_fmp=use_fmp)
+            quarterly_data = self.fetch_quarterly_data(ticker)
 
-        # If data came from FMP and has enhanced fields, use FMP snapshot
-        if (quarterly_data.get('data_source') == 'fmp' and
-            self.fmp_available and
-            self.fmp_fetcher):
-            # Re-fetch FMP data for enhanced snapshot (gets comprehensive dict)
-            fmp_data = self.fmp_fetcher.fetch_comprehensive_fundamentals(ticker, include_advanced=True)
-            if fmp_data:
-                snapshot = self.fmp_fetcher.create_enhanced_snapshot(ticker, fmp_data)
-                
-                # Append DCF and Insider data if present
-                dcf = fmp_data.get('dcf')
-                insider = fmp_data.get('insider_trading', [])
-                
-                extra_info = []
-                if dcf:
-                    # Simple undervalued check
-                    # We need current price which isn't passed here, but we can assume user checks it
-                    extra_info.append(f"\nIntrinsic Value (DCF): ${dcf:.2f}")
-                
-                if insider:
-                    # Check for recent buys
-                    recent_buys = [t for t in insider if 'Buy' in t.get('transactionType', '') or 'P - Purchase' in t.get('transactionType', '')]
-                    if recent_buys:
-                        extra_info.append(f"Insider Activity: {len(recent_buys)} recent buys detected!")
-                
-                if extra_info:
-                    snapshot += "\n" + "\n".join(extra_info)
-
-                return snapshot
-
-        # Fall back to standard snapshot
         return create_fundamental_snapshot(ticker, quarterly_data)
 
     def analyze_for_signal(
         self,
         ticker: str,
-        quarterly_data: Optional[Dict] = None,
-        use_fmp: bool = False
+        quarterly_data: Optional[Dict] = None
     ) -> Dict[str, any]:
-        """Analyze fundamentals for signal engine.
-
-        Args:
-            ticker: Stock ticker
-            quarterly_data: Pre-fetched data, or will fetch if None
-            use_fmp: Use FMP for enhanced analysis if available
-
-        Returns:
-            Dict with trend analysis and penalty
-        """
+        """Analyze fundamentals for signal engine."""
         if not quarterly_data:
-            quarterly_data = self.fetch_quarterly_data(ticker, use_fmp=use_fmp)
+            quarterly_data = self.fetch_quarterly_data(ticker)
 
         return analyze_fundamentals_for_signal(quarterly_data)
 
-    def get_api_usage(self) -> Dict[str, int]:
-        """Get API usage statistics.
-
-        Returns:
-            Dict with FMP call count, limit, and bandwidth
-        """
-        persisted_usage = self.fmp_fetcher.get_usage_stats() if (self.fmp_available and self.fmp_fetcher) else {}
-        attempted_calls = persisted_usage.get('attempted_calls', 0)
-        usage = {
-            'fmp_available': self.fmp_available,
-            'fmp_attempted_calls': attempted_calls,
-            'fmp_successful_calls': persisted_usage.get('successful_calls', 0),
-            'fmp_throttled_calls': persisted_usage.get('throttled_calls', 0),
-            'fmp_cache_hits': persisted_usage.get('cache_hits', 0),
-            'fmp_daily_limit': self.fmp_daily_limit,
-            'fmp_calls_remaining': max(0, self.fmp_daily_limit - attempted_calls)
+    def get_api_usage(self) -> Dict[str, any]:
+        """Get usage statistics."""
+        return {
+            'source': 'yfinance'
         }
-
-        # Add bandwidth stats if FMP is available
-        if self.fmp_available and self.fmp_fetcher:
-            bandwidth_stats = self.fmp_fetcher.get_bandwidth_stats()
-            usage.update(bandwidth_stats)
-
-        return usage
-
-    def reset_usage_counter(self):
-        """Reset FMP usage counter (call at start of new day)."""
-        if self.fmp_fetcher:
-            self.fmp_fetcher.usage_state['attempted_calls'] = 0
-            self.fmp_fetcher.usage_state['successful_calls'] = 0
-            self.fmp_fetcher.usage_state['throttled_calls'] = 0
-            self.fmp_fetcher.usage_state['cache_hits'] = 0
-            self.fmp_fetcher.usage_state['cache_misses'] = 0
-            self.fmp_fetcher.usage_state['request_log'] = []
-            self.fmp_fetcher._save_usage_state()
-        logger.info("FMP usage counter reset")

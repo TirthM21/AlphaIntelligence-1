@@ -3,7 +3,7 @@ ETF Scoring Engine for Thematic Identification.
 
 Scores thematic ETFs on:
 - 30% Theme Purity (concentration, holdings focus)
-- 40% Long-Term RS (1Y, 3Y, 5Y returns vs SPY)
+- 40% Long-Term RS (1Y, 3Y, 5Y returns vs Nifty 50)
 - 20% Efficiency (expense ratio, turnover)
 - 10% Structural Tailwind (theme strength)
 
@@ -81,9 +81,9 @@ class ETFEngine:
                 'return_1yr': float,
                 'return_3yr': float,
                 'return_5yr': float,
-                'spy_return_1yr': float,
-                'spy_return_3yr': float,
-                'spy_return_5yr': float,
+                'bench_return_1yr': float,
+                'bench_return_3yr': float,
+                'bench_return_5yr': float,
             }
 
         Returns:
@@ -183,19 +183,19 @@ class ETFEngine:
         """Score multi-year RS persistence (40 points max)."""
         from .metrics import MetricsCalculator
 
-        # Calculate returns vs SPY
+        # Calculate returns vs Nifty 50
         etf_return_1yr = price_data.get("return_1yr", 0.0)
         etf_return_3yr = price_data.get("return_3yr", 0.0)
         etf_return_5yr = price_data.get("return_5yr", 0.0)
 
-        spy_return_1yr = price_data.get("spy_return_1yr", 0.0)
-        spy_return_3yr = price_data.get("spy_return_3yr", 0.0)
-        spy_return_5yr = price_data.get("spy_return_5yr", 0.0)
+        bench_return_1yr = price_data.get("bench_return_1yr", 0.0)
+        bench_return_3yr = price_data.get("bench_return_3yr", 0.0)
+        bench_return_5yr = price_data.get("bench_return_5yr", 0.0)
 
-        # RS = ETF return - SPY return
-        rs_1yr = etf_return_1yr - spy_return_1yr
-        rs_3yr = etf_return_3yr - spy_return_3yr
-        rs_5yr = etf_return_5yr - spy_return_5yr
+        # RS = ETF return - Nifty 50 return
+        rs_1yr = etf_return_1yr - bench_return_1yr
+        rs_3yr = etf_return_3yr - bench_return_3yr
+        rs_5yr = etf_return_5yr - bench_return_5yr
 
         score.return_1yr = etf_return_1yr
         score.return_3yr = etf_return_3yr
@@ -294,7 +294,7 @@ class ETFEngine:
         # RS drivers
         if score.rs_3yr_score > 10:
             score.thesis_drivers.append(
-                "Strong 3-year outperformance vs SPY"
+                "Strong 3-year outperformance vs Nifty 50"
             )
 
         if score.rs_5yr_score > 8:
@@ -316,7 +316,7 @@ class ETFEngine:
         # Size drivers
         if score.aum_millions > 5000:
             score.thesis_drivers.append(
-                f"Large AUM (${score.aum_millions:,.0f}M)"
+                f"Large AUM ({score.aum_millions:,.0f}M)"
             )
 
         # Tailwind driver

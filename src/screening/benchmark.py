@@ -1,6 +1,6 @@
 """Benchmark and market breadth analysis module.
 
-This module analyzes SPY (market benchmark) and calculates market breadth metrics.
+This module analyzes Nifty 50 (market benchmark) and calculates market breadth metrics.
 """
 
 import logging
@@ -17,18 +17,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def analyze_spy_trend(spy_price_data: pd.DataFrame, current_spy_price: float) -> Dict[str, any]:
-    """Analyze SPY trend using Phase classification.
-
-    Args:
-        spy_price_data: SPY OHLCV data
-        current_spy_price: Current SPY price
-
-    Returns:
-        Dict with SPY trend analysis
-    """
-    if spy_price_data.empty:
-        logger.warning("Empty SPY price data")
+def analyze_benchmark_trend(nifty_price_data: pd.DataFrame, current_nifty_price: float) -> Dict[str, any]:
+    """Analyze Nifty 50 trend using Phase classification."""
+    if nifty_price_data.empty:
+        logger.warning("Empty benchmark price data")
         return {
             'phase': 0,
             'phase_name': 'Unknown',
@@ -36,8 +28,8 @@ def analyze_spy_trend(spy_price_data: pd.DataFrame, current_spy_price: float) ->
             'error': 'No data'
         }
 
-    # Classify SPY phase
-    phase_info = classify_phase(spy_price_data, current_spy_price)
+    # Classify Nifty phase
+    phase_info = classify_phase(nifty_price_data, current_nifty_price)
 
     # Determine overall trend
     phase = phase_info['phase']
@@ -53,7 +45,7 @@ def analyze_spy_trend(spy_price_data: pd.DataFrame, current_spy_price: float) ->
         trend = 'Unknown'
 
     return {
-        'ticker': 'SPY',
+        'ticker': '^NSEI',
         'phase': phase,
         'phase_name': phase_info['phase_name'],
         'trend': trend,
@@ -62,7 +54,7 @@ def analyze_spy_trend(spy_price_data: pd.DataFrame, current_spy_price: float) ->
         'sma_200': phase_info.get('sma_200'),
         'slope_50': phase_info.get('slope_50'),
         'slope_200': phase_info.get('slope_200'),
-        'current_price': current_spy_price,
+        'current_price': current_nifty_price,
         'reasons': phase_info.get('reasons', [])
     }
 
@@ -129,33 +121,25 @@ def calculate_market_breadth(phase_results: List[Dict]) -> Dict[str, any]:
     }
 
 
-def classify_market_regime(spy_analysis: Dict, breadth: Dict) -> str:
-    """Classify overall market regime (Risk-On vs Risk-Off).
-
-    Args:
-        spy_analysis: SPY trend analysis
-        breadth: Market breadth metrics
-
-    Returns:
-        Market regime classification
-    """
-    spy_phase = spy_analysis.get('phase', 0)
+def classify_market_regime(benchmark_analysis: Dict, breadth: Dict) -> str:
+    """Classify overall market regime."""
+    bench_phase = benchmark_analysis.get('phase', 0)
     phase_2_pct = breadth.get('phase_2_pct', 0)
 
     # Strong Risk-On conditions
-    if spy_phase == 2 and phase_2_pct > 40:
+    if bench_phase == 2 and phase_2_pct > 40:
         return 'RISK-ON (Strong)'
 
     # Moderate Risk-On
-    elif spy_phase == 2 and phase_2_pct > 25:
+    elif bench_phase == 2 and phase_2_pct > 25:
         return 'RISK-ON (Moderate)'
 
     # Weak Risk-On / Mixed
-    elif spy_phase == 2 or (spy_phase == 1 and phase_2_pct > 30):
+    elif bench_phase == 2 or (bench_phase == 1 and phase_2_pct > 30):
         return 'RISK-ON (Weak) / Mixed'
 
     # Risk-Off conditions
-    elif spy_phase == 4 or phase_2_pct < 15:
+    elif bench_phase == 4 or phase_2_pct < 15:
         return 'RISK-OFF'
 
     # Transitional / Uncertain
@@ -163,47 +147,32 @@ def classify_market_regime(spy_analysis: Dict, breadth: Dict) -> str:
         return 'TRANSITIONAL / Uncertain'
 
 
-def format_benchmark_summary(spy_analysis: Dict, breadth: Dict) -> str:
-    """Format benchmark summary for output.
-
-    Args:
-        spy_analysis: SPY analysis dict
-        breadth: Market breadth dict
-
-    Returns:
-        Formatted summary string
-    """
-    regime = classify_market_regime(spy_analysis, breadth)
+def format_benchmark_summary(bench_analysis: Dict, breadth: Dict) -> str:
+    """Format benchmark summary (Nifty 50)."""
+    regime = classify_market_regime(bench_analysis, breadth)
 
     summary = f"\n{'='*60}\n"
-    summary += "BENCHMARK SUMMARY\n"
+    summary += "BENCHMARK SUMMARY (NIFTY 50)\n"
     summary += f"{'='*60}\n\n"
 
-    # SPY Analysis with emoji
-    phase = spy_analysis['phase']
-    if phase == 2:
-        phase_emoji = "🟢"  # Uptrend
-    elif phase == 1:
-        phase_emoji = "🟡"  # Base building
-    elif phase == 3:
-        phase_emoji = "🟡"  # Distribution
-    else:
-        phase_emoji = "🔴"  # Downtrend
+    # Nifty 50 Analysis with emoji
+    phase = bench_analysis['phase']
+    phase_emoji = "🟢" if phase == 2 else "🟡" if phase in [1, 3] else "🔴"
 
-    summary += f"{phase_emoji} SPY Trend Classification:\n"
-    summary += f"  Phase: {spy_analysis['phase']} - {spy_analysis['phase_name']}\n"
-    summary += f"  Trend: {spy_analysis['trend']}\n"
-    summary += f"  Current Price: ${spy_analysis.get('current_price', 0):.2f}\n"
+    summary += f"{phase_emoji} Nifty 50 trend classification:\n"
+    summary += f"  Phase: {bench_analysis['phase']} - {bench_analysis['phase_name']}\n"
+    summary += f"  Trend: {bench_analysis['trend']}\n"
+    summary += f"  Current Price: {bench_analysis.get('current_price', 0):.2f}\n"
 
-    slope_50 = spy_analysis.get('slope_50', 0)
+    slope_50 = bench_analysis.get('slope_50', 0)
     slope_50_emoji = "🟢" if slope_50 > 0 else "🔴"
-    summary += f"  {slope_50_emoji} 50 SMA: ${spy_analysis.get('sma_50', 0):.2f} (slope: {slope_50:.4f})\n"
+    summary += f"  {slope_50_emoji} 50 SMA: {bench_analysis.get('sma_50', 0):.2f} (slope: {slope_50:.4f})\n"
 
-    slope_200 = spy_analysis.get('slope_200', 0)
+    slope_200 = bench_analysis.get('slope_200', 0)
     slope_200_emoji = "🟢" if slope_200 > 0 else "🔴"
-    summary += f"  {slope_200_emoji} 200 SMA: ${spy_analysis.get('sma_200', 0):.2f} (slope: {slope_200:.4f})\n"
+    summary += f"  {slope_200_emoji} 200 SMA: {bench_analysis.get('sma_200', 0):.2f} (slope: {slope_200:.4f})\n"
 
-    confidence = spy_analysis.get('confidence', 0)
+    confidence = bench_analysis.get('confidence', 0)
     if confidence >= 80:
         conf_emoji = "🟢"
     elif confidence >= 60:
@@ -257,34 +226,34 @@ def format_benchmark_summary(spy_analysis: Dict, breadth: Dict) -> str:
     return summary
 
 
-def should_generate_signals(spy_analysis: Dict, breadth: Dict,
+def should_generate_signals(benchmark_analysis: Dict, breadth: Dict,
                              min_phase2_pct: float = 15.0) -> Dict[str, any]:
     """Determine if market conditions warrant generating buy signals.
 
     Args:
-        spy_analysis: SPY analysis
+        benchmark_analysis: Nifty 50 analysis
         breadth: Market breadth
         min_phase2_pct: Minimum Phase 2 percentage for signal generation
 
     Returns:
         Dict with recommendation
     """
-    spy_phase = spy_analysis.get('phase', 0)
+    bench_phase = benchmark_analysis.get('phase', 0)
     phase_2_pct = breadth.get('phase_2_pct', 0)
-    regime = classify_market_regime(spy_analysis, breadth)
+    regime = classify_market_regime(benchmark_analysis, breadth)
 
     # Determine if we should generate buy signals
     should_buy = False
     reasons = []
 
-    if spy_phase in [2, 1]:
+    if bench_phase in [2, 1]:
         if phase_2_pct >= min_phase2_pct:
             should_buy = True
             reasons.append(f"Market breadth adequate ({phase_2_pct:.1f}% in Phase 2)")
         else:
             reasons.append(f"Market breadth weak ({phase_2_pct:.1f}% in Phase 2, need {min_phase2_pct}%)")
     else:
-        reasons.append(f"SPY in unfavorable phase ({spy_phase})")
+        reasons.append(f"Nifty 50 in unfavorable phase ({bench_phase})")
 
     # Sell signals - always generate if applicable
     should_sell = True
@@ -295,5 +264,5 @@ def should_generate_signals(spy_analysis: Dict, breadth: Dict,
         'regime': regime,
         'reasons': reasons,
         'phase_2_pct': phase_2_pct,
-        'spy_phase': spy_phase
+        'bench_phase': bench_phase
     }

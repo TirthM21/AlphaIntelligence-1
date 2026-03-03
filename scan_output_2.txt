@@ -1,0 +1,14 @@
+2026-03-02 20:59:37,394 - src.reporting.newsletter_generator - WARNING - FinnhubFetcher unavailable
+2026-03-02 20:59:37,394 - src.reporting.newsletter_generator - WARNING - MarketauxFetcher unavailable
+2026-03-02 20:59:37,394 - src.reporting.newsletter_generator - WARNING - FredFetcher unavailable
+2026-03-02 20:59:39,052 - __main__ - INFO - Configuration: 3 workers ╫ 2.0 TPS = ~6.0 TPS effective
+2026-03-02 20:59:39,052 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only for India)
+2026-03-02 20:59:39,052 - src.data.nse_fetcher - INFO - NSEFetcher initialized
+2026-03-02 20:59:39,052 - src.data.universe_fetcher - INFO - StockUniverseFetcher initialized (NSE India)
+2026-03-02 20:59:39,052 - __main__ - INFO - Fetching stock universe...
+2026-03-02 20:59:39,052 - src.data.universe_fetcher - INFO - Fetching fresh universe from NSE...
+2026-03-02 20:59:39,685 - src.data.nse_fetcher - ERROR - Error fetching stocks for index NIFTY 500: string indices must be integers, not 'str'
+2026-03-02 20:59:39,685 - src.data.universe_fetcher - WARNING - NIFTY 500 fetch failed, trying NIFTY 50...
+2026-03-02 20:59:39,871 - src.data.nse_fetcher - ERROR - Error fetching stocks for index NIFTY 50: string indices must be integers, not 'str'
+2026-03-02 20:59:39,871 - src.data.universe_fetcher - ERROR - Failed to fetch any stocks from NSE
+2026-03-02 20:59:39,871 - __main__ - ERROR - Failed to fetch universe

@@ -35,7 +35,7 @@ class Recommendation(Base):
     price_at_signal = Column(Float, nullable=False)
     score = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    spy_price_at_signal = Column(Float) # For benchmarking
+    benchmark_price_at_signal = Column(Float) # For benchmarking
 
 class Position(Base):
     """Tracks individual open/closed positions for P&L tracking."""
@@ -53,8 +53,8 @@ class Position(Base):
     pnl_pct = Column(Float, nullable=True)  # Filled on close
     strategy = Column(String(20), default='DAILY')  # DAILY or QUARTERLY
     exit_reason = Column(String(50), nullable=True)  # SELL_SIGNAL, STOP_LOSS, SMA_VIOLATION, MANUAL
-    spy_entry_price = Column(Float, nullable=True)
-    spy_exit_price = Column(Float, nullable=True)
+    benchmark_entry_price = Column(Float, nullable=True)
+    benchmark_exit_price = Column(Float, nullable=True)
 
 class FundPerformance(Base):
     """Daily fund-level performance snapshot."""
@@ -72,8 +72,8 @@ class FundPerformance(Base):
     worst_trade = Column(String(20), nullable=True)
     sharpe_ratio = Column(Float, nullable=True)
     max_drawdown = Column(Float, nullable=True)
-    alpha_vs_spy = Column(Float, default=0.0)
-    spy_return = Column(Float, default=0.0)
+    alpha_vs_benchmark = Column(Float, default=0.0)
+    benchmark_return = Column(Float, default=0.0)
     strategy = Column(String(20), default='DAILY')
 
 class DBManager:
@@ -177,13 +177,13 @@ class DBManager:
         finally:
             session.close()
 
-    def record_recommendations(self, signals: List[Dict], spy_price: float):
+    def record_recommendations(self, signals: List[Dict], benchmark_price: float):
         """Save a batch of signals to the database for tracking."""
         if not self.db_url or not signals: return
         
         session = self.Session()
         try:
-            normalized_spy_price = self._to_native_float(spy_price)
+            normalized_benchmark_price = self._to_native_float(benchmark_price)
             inserted = 0
             skipped = 0
             for s in signals:
@@ -196,7 +196,7 @@ class DBManager:
                     signal_type='BUY' if s.get('is_buy') else 'SELL',
                     price_at_signal=price_at_signal,
                     score=self._to_native_float(s.get('score')),
-                    spy_price_at_signal=normalized_spy_price
+                    benchmark_price_at_signal=normalized_benchmark_price
                 )
                 session.add(rec)
                 inserted += 1
@@ -220,7 +220,7 @@ class DBManager:
                     'ticker': r.ticker,
                     'type': r.signal_type,
                     'entry_price': r.price_at_signal,
-                    'spy_entry': r.spy_price_at_signal,
+                    'benchmark_entry': r.benchmark_price_at_signal,
                     'date': r.timestamp
                 } for r in recs
             ]
@@ -231,7 +231,7 @@ class DBManager:
 
     def open_position(self, ticker: str, entry_price: float, stop_loss: float = None,
                       signal_score: float = None, strategy: str = 'DAILY',
-                      spy_price: float = None) -> bool:
+                      benchmark_price: float = None) -> bool:
         """Open a new position. Skips if already open for this ticker+strategy."""
         if not self.db_url: return False
         
@@ -255,11 +255,11 @@ class DBManager:
                 stop_loss=self._to_native_float(stop_loss),
                 signal_score=self._to_native_float(signal_score),
                 strategy=strategy,
-                spy_entry_price=self._to_native_float(spy_price)
+                benchmark_entry_price=self._to_native_float(benchmark_price)
             )
             session.add(pos)
             session.commit()
-            logger.info(f"📈 Opened {strategy} position: {ticker} @ ${entry_price:.2f}")
+            logger.info(f"📈 Opened {strategy} position: {ticker} @ {entry_price:.2f}")
             return True
         except Exception as e:
             logger.error(f"Failed to open position for {ticker}: {e}")
@@ -269,7 +269,7 @@ class DBManager:
             session.close()
 
     def close_position(self, ticker: str, exit_price: float, exit_reason: str = 'SELL_SIGNAL',
-                       strategy: str = 'DAILY', spy_price: float = None) -> Optional[Dict]:
+                       strategy: str = 'DAILY', benchmark_price: float = None) -> Optional[Dict]:
         """Close an open position. Returns the closed position data or None."""
         if not self.db_url: return None
         
@@ -287,7 +287,7 @@ class DBManager:
             pos.exit_date = datetime.utcnow()
             pos.status = 'CLOSED'
             pos.exit_reason = exit_reason
-            pos.spy_exit_price = self._to_native_float(spy_price)
+            pos.benchmark_exit_price = self._to_native_float(benchmark_price)
             if normalized_exit_price is not None and pos.entry_price:
                 pos.pnl_pct = ((normalized_exit_price - pos.entry_price) / pos.entry_price) * 100
             else:
@@ -331,7 +331,7 @@ class DBManager:
                 'stop_loss': p.stop_loss,
                 'signal_score': p.signal_score,
                 'strategy': p.strategy,
-                'spy_entry_price': p.spy_entry_price
+                'benchmark_entry_price': p.benchmark_entry_price
             } for p in positions]
         except Exception as e:
             logger.error(f"Failed to fetch open positions: {e}")
@@ -359,8 +359,8 @@ class DBManager:
                 'exit_reason': p.exit_reason,
                 'strategy': p.strategy,
                 'hold_days': (p.exit_date - p.entry_date).days if p.exit_date and p.entry_date else 0,
-                'spy_entry_price': p.spy_entry_price,
-                'spy_exit_price': p.spy_exit_price
+                'benchmark_entry_price': p.benchmark_entry_price,
+                'benchmark_exit_price': p.benchmark_exit_price
             } for p in positions]
         except Exception as e:
             logger.error(f"Failed to fetch closed positions: {e}")
@@ -390,8 +390,8 @@ class DBManager:
                 'avg_loss',
                 'sharpe_ratio',
                 'max_drawdown',
-                'alpha_vs_spy',
-                'spy_return',
+                'alpha_vs_benchmark',
+                'benchmark_return',
             }
             int_cols = {'open_positions', 'closed_positions'}
             nullable_cols = {
@@ -466,8 +466,8 @@ class DBManager:
                 'avg_loss': r.avg_loss,
                 'sharpe_ratio': r.sharpe_ratio,
                 'max_drawdown': r.max_drawdown,
-                'alpha_vs_spy': r.alpha_vs_spy,
-                'spy_return': r.spy_return,
+                'alpha_vs_benchmark': r.alpha_vs_benchmark,
+                'benchmark_return': r.benchmark_return,
                 'best_trade': r.best_trade,
                 'worst_trade': r.worst_trade
             } for r in records]

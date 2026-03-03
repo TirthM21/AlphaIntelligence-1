@@ -62,6 +62,49 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
     return rsi
 
 
+def calculate_mfi(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
+    """Calculate Money Flow Index (MFI)."""
+    typical_price = (high + low + close) / 3
+    money_flow = typical_price * volume
+    
+    delta = typical_price.diff()
+    pos_flow = pd.Series(0.0, index=close.index)
+    neg_flow = pd.Series(0.0, index=close.index)
+    
+    pos_flow[delta > 0] = money_flow[delta > 0]
+    neg_flow[delta < 0] = money_flow[delta < 0]
+    
+    avg_pos_flow = pos_flow.rolling(window=period).sum()
+    avg_neg_flow = neg_flow.rolling(window=period).sum()
+    
+    mfr = avg_pos_flow / avg_neg_flow.replace(0, np.nan)
+    mfi = 100 - (100 / (1 + mfr))
+    return mfi
+
+
+def calculate_cci(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 20) -> pd.Series:
+    """Calculate Commodity Channel Index (CCI)."""
+    typical_price = (high + low + close) / 3
+    sma = typical_price.rolling(window=period).mean()
+    mad = typical_price.rolling(window=period).apply(lambda x: np.abs(x - x.mean()).mean())
+    cci = (typical_price - sma) / (0.015 * mad)
+    return cci
+
+
+def detect_crossover(series_a: pd.Series, series_b: pd.Series) -> bool:
+    """Detect if series_a crossed above series_b in the last period."""
+    if len(series_a) < 2 or len(series_b) < 2:
+        return False
+    return (series_a.iloc[-2] <= series_b.iloc[-2]) and (series_a.iloc[-1] > series_b.iloc[-1])
+
+
+def detect_crossunder(series_a: pd.Series, series_b: pd.Series) -> bool:
+    """Detect if series_a crossed below series_b in the last period."""
+    if len(series_a) < 2 or len(series_b) < 2:
+        return False
+    return (series_a.iloc[-2] >= series_b.iloc[-2]) and (series_a.iloc[-1] < series_b.iloc[-1])
+
+
 def calculate_sma(prices: pd.Series, period: int) -> pd.Series:
     """Calculate Simple Moving Average (SMA).
 

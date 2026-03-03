@@ -77,13 +77,13 @@ class InvalidationTracker:
                 action_threshold="Critical Exit",
             ),
             "negative_3y_rs": InvalidationTrigger(
-                trigger_name="3-Year RS vs SPY Turns Negative",
+                trigger_name="3-Year RS vs Nifty 50 Turns Negative",
                 category="Technical",
                 description="Multi-year relative strength deterioration",
                 action_threshold="Reduce 50%",
             ),
             "negative_5y_rs": InvalidationTrigger(
-                trigger_name="5-Year RS vs SPY Turns Negative",
+                trigger_name="5-Year RS vs Nifty 50 Turns Negative",
                 category="Technical",
                 description="Multi-year underperformance persists",
                 action_threshold="Critical Exit",
@@ -104,7 +104,7 @@ class InvalidationTracker:
 
         self.etf_triggers = {
             "negative_3y_rs": InvalidationTrigger(
-                trigger_name="3-Year RS vs SPY Turns Negative",
+                trigger_name="3-Year RS vs Nifty 50 Turns Negative",
                 category="Technical",
                 description="ETF underperformance persists",
                 action_threshold="Reduce 50%",
@@ -271,7 +271,7 @@ class ReportGenerator:
                         "Allocation (%)",
                         "Sector/Theme",
                         "Regime/Bucket",
-                        "Position Size ($1M portfolio)",
+                        "Position Size (10,000,000 unit portfolio)",
                     ],
                 )
                 writer.writeheader()
@@ -306,7 +306,7 @@ class ReportGenerator:
                         "Allocation (%)": f"{allocation * 100:.2f}",
                         "Sector/Theme": sector_theme,
                         "Regime/Bucket": regime_bucket,
-                        "Position Size ($1M portfolio)": f"${allocation * 1_000_000:,.0f}",
+                        "Position Size (10,000,000 unit portfolio)": f"{allocation * 10_000_000:,.0f}",
                     })
 
             logger.info(f"✓ Allocation CSV written to {filepath}")

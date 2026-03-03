@@ -13,16 +13,14 @@ from urllib.parse import urlparse
 import yfinance as yf
 import yaml
 
+logger = logging.getLogger(__name__)
+
 from ..data.enhanced_fundamentals import EnhancedFundamentalsFetcher
-from ..data.finnhub_fetcher import FinnhubFetcher
-from ..data.marketaux_fetcher import MarketauxFetcher
-from ..data.fred_fetcher import FredFetcher
+
 from ..data.price_service import PriceService
 from ..data.provider_health import provider_health
 from ..ai.ai_agent import AIAgent
 from .visualizer import ChartArtifact, MarketVisualizer
-
-logger = logging.getLogger(__name__)
 
 
 def _json_safe(value: Any) -> Any:
@@ -71,12 +69,12 @@ class NewsletterGenerator:
     """Generates a high-quality, professional daily market newsletter."""
 
     DEFAULT_PROVIDER_MATRIX = {
-        "macro": ["fred", "fmp"],
-        "headlines": ["finnhub", "marketaux", "fmp"],
-        "sector_performance": ["fmp", "finnhub"],
+        "macro": ["yfinance"],
+        "headlines": ["yfinance"],
+        "sector_performance": ["yfinance"],
         "prices": ["yfinance"],
     }
-    SUPPORTED_PROVIDERS = {"fred", "fmp", "finnhub", "marketaux", "yfinance"}
+    SUPPORTED_PROVIDERS = {"yfinance"}
 
     def __init__(self, portfolio_path: str = "./data/positions.json", config_path: str = "config.yaml"):
         try:
@@ -84,9 +82,6 @@ class NewsletterGenerator:
         except Exception as e:
             logger.warning(f"EnhancedFundamentalsFetcher unavailable during init: {e}")
             self.fetcher = None
-        self.finnhub = FinnhubFetcher()
-        self.marketaux = MarketauxFetcher()
-        self.fred = FredFetcher()
         self.ai_agent = AIAgent()
         self.visualizer = MarketVisualizer(output_dir="./data/charts")
         self.price_service = PriceService()
@@ -139,17 +134,7 @@ class NewsletterGenerator:
         return matrix
 
     def _build_provider_status(self) -> Dict[str, Dict]:
-        fmp_key = None
-        if self.fetcher and self.fetcher.fmp_fetcher:
-            fmp_key = self.fetcher.fmp_fetcher.api_key
-        elif self.fetcher and self.fetcher.fmp_available:
-            fmp_key = os.getenv("FMP_API_KEY")
-
         status = {
-            "finnhub": {"active": bool(self.finnhub.api_key), "missing_key": not bool(self.finnhub.api_key), "key_env": "FINNHUB_API_KEY"},
-            "marketaux": {"active": bool(self.marketaux.api_key), "missing_key": not bool(self.marketaux.api_key), "key_env": "MARKETAUX_API_KEY"},
-            "fred": {"active": bool(self.fred.api_key), "missing_key": not bool(self.fred.api_key), "key_env": "FRED_API_KEY"},
-            "fmp": {"active": bool(fmp_key), "missing_key": not bool(fmp_key), "key_env": "FMP_API_KEY"},
             "yfinance": {"active": True, "missing_key": False, "key_env": None},
         }
         health_snapshot = provider_health.snapshot()
@@ -1050,81 +1035,10 @@ class NewsletterGenerator:
         for plan in section_plans:
             section_results[plan.section_name] = _execute_section_plan(plan)
 
-        # Extra Finnhub data for newsletter sections (when key is available)
-        if self.finnhub.api_key:
-            try:
-                ipo_calendar = self.finnhub.fetch_ipo_calendar(days_forward=10, limit=10)
-                buy_tickers = [x.get('ticker', '') for x in (top_buys or []) if x.get('ticker')]
-                sell_tickers = [x.get('ticker', '') for x in (top_sells or []) if x.get('ticker')]
-                sentiment_snaps = self.finnhub.fetch_top_ticker_sentiment_snapshots(
-                    top_buy_tickers=buy_tickers,
-                    top_sell_tickers=sell_tickers,
-                    per_side=3,
-                )
-                if portfolio_tickers:
-                    for t in portfolio_tickers[:3]:
-                        for item in (self.finnhub.fetch_company_news(t) or [])[:2]:
-                            portfolio_news.append({
-                                'title': item.get('headline') or item.get('title'),
-                                'symbol': t,
-                                'url': item.get('url'),
-                                'summary': item.get('summary', ''),
-                            })
-            except Exception as e:
-                logger.error(f"Finnhub supplemental fetch failed: {e}")
-
-        macro_payload = section_results.get("macro") or {}
-        econ_data = macro_payload.get("econ_data", {})
-        macro_panel = macro_payload.get("macro_panel", {})
-        macro_panel_fallback = macro_payload.get("macro_panel_fallback", "")
-        market_news = section_results.get("market_headlines") or []
-        earnings_cal = section_results.get("earnings_calendar") or []
-        econ_calendar = section_results.get("economic_calendar") or []
-
-        if self.marketaux.api_key:
-            try:
-                logger.info("Fetching Marketaux trending entities...")
-                trending_entities = self.marketaux.fetch_trending_entities()
-            except Exception as e:
-                logger.error(f"Marketaux fetch failed: {e}")
-
-        if fmp_fetcher:
-            try:
-                # FMP used for DAILY news as requested
-                if self.fetcher.fmp_fetcher.is_endpoint_cooldown_active('stock_news'):
-                    logger.warning("FMP cooldown active for market news section; switching to fallback provider.")
-                else:
-                    logger.info("Fetching FMP daily market news...")
-                    market_news_fmp = self.fetcher.fmp_fetcher.fetch_market_news(limit=10)
-                    if market_news_fmp:
-                        for item in market_news_fmp:
-                            market_news.append({
-                                'title': item.get('title'),
-                                'url': item.get('url'),
-                                'site': 'FMP News',
-                                'summary': item.get('text', '')
-                            })
-                
-                # FMP for economic calendar if not already populated
-                if not econ_calendar:
-                    if self.fetcher.fmp_fetcher.is_endpoint_cooldown_active('economic_calendar'):
-                        logger.warning("FMP cooldown active for economic calendar; skipping to existing/fallback sources.")
-                    else:
-                        econ_calendar = self.fetcher.fmp_fetcher.fetch_economic_calendar(days_forward=3)
-                
-                # FMP for portfolio news DAILY 
-                if not portfolio_news and portfolio_tickers:
-                    if self.fetcher.fmp_fetcher.is_endpoint_cooldown_active('stock_news'):
-                        logger.warning("FMP cooldown active for portfolio news; switching to fallback provider.")
-                    else:
-                        portfolio_news = self.fetcher.fmp_fetcher.fetch_stock_news(portfolio_tickers, limit=3)
-            except Exception as e:
-                logger.error(f"Failed to fetch FMP supplemental data: {e}")
-
-        if not market_news and "yfinance" in headline_providers:
+        if not market_news:
             try:
                 logger.info("Falling back to basic yfinance news...")
-                for t in ['SPY', 'QQQ', 'DIA']:
+                for t in ['^NSEI', '^NSEBANK', '^CNXIT']:
                     stock = yf.Ticker(t)
                     for n in (stock.news or [])[:2]:
                         market_news.append({
@@ -1180,20 +1094,15 @@ class NewsletterGenerator:
         index_perf = {}
         if sector_perf:
             try:
-                if self.fetcher.fmp_fetcher.is_endpoint_cooldown_active('sector-performance'):
-                    logger.warning("FMP cooldown active for sector performance section; using fallback providers.")
-                else:
-                    sector_perf = self.fetcher.fmp_fetcher.fetch_sector_performance()
                 # Sort sectors by performance
-                if sector_perf:
-                    sector_perf = sorted(sector_perf, key=lambda x: float(x.get('changesPercentage', '0').replace('%','')), reverse=True)
+                sector_perf = sorted(sector_perf, key=lambda x: float(x.get('changesPercentage', '0').replace('%','')), reverse=True)
             except Exception as e:
                 logger.warning(f"Sector perf sort failed: {e}")
         
-        # Cap Segment Analysis (SPY, MDY, IWM)
+        # NSE Index Segment Analysis
         if "yfinance" in price_providers:
             try:
-                for symbol, label in [('SPY', 'Large Cap'), ('MDY', 'Mid Cap'), ('IWM', 'Small Cap')]:
+                for symbol, label in [('^NSEI', 'Nifty 50'), ('^NSEJRNI', 'Nifty Next 50'), ('^NSEMDCP50', 'Nifty Midcap 50')]:
                     t = yf.Ticker(symbol)
                     hist = t.history(period='2d')
                     if len(hist) >= 2:
@@ -1202,26 +1111,14 @@ class NewsletterGenerator:
             except Exception as e:
                 logger.error(f"Cap perf check failed: {e}")
 
-        # Major index snapshot + sentiment/movers via Finnhub integration
+        # Major index snapshot via yfinance
         market_snapshot = {}
-        sentiment_proxy = section_results.get("market_sentiment") or {"score": 50.0, "label": "Neutral", "components": []}
-        notable_movers = section_results.get("movers") or []
-        if not isinstance(notable_movers, list):
-            try:
-                notable_movers = list(notable_movers)
-            except Exception:
-                notable_movers = []
-        if self.finnhub.api_key:
-            try:
-                market_snapshot = self.finnhub.fetch_major_index_snapshot()
-                for item in market_snapshot.values():
-                    index_perf[item.get('label', item.get('symbol', 'Index'))] = item.get('change_pct', 0.0)
-            except Exception as e:
-                logger.error(f"Finnhub snapshot check failed: {e}")
+        sentiment_proxy = {"score": 50.0, "label": "Neutral", "components": []}
+        notable_movers = []
 
         if not index_perf and "yfinance" in price_providers:
             try:
-                for symbol, label in [('SPY', 'S&P 500'), ('QQQ', 'NASDAQ 100'), ('DIA', 'Dow Jones'), ('IWM', 'Russell 2000')]:
+                for symbol, label in [('^NSEI', 'Nifty 50'), ('^NSEBANK', 'Bank Nifty'), ('^CNXIT', 'Nifty IT'), ('^NSEJRNI', 'Nifty Next 50')]:
                     hist = yf.Ticker(symbol).history(period='2d')
                     if len(hist) >= 2:
                         move = ((hist['Close'].iloc[-1] / hist['Close'].iloc[-2]) - 1) * 100
@@ -1278,7 +1175,7 @@ class NewsletterGenerator:
             bullets = [ln if ln.startswith('-') else f"- {ln.lstrip('•- ')}" for ln in lines[:2]]
             return "\n".join(bullets) if bullets else fallback
 
-        spy_trend = market_status.get('spy', {}).get('trend', 'NEUTRAL')
+        bench_trend = market_status.get('benchmark', {}).get('trend', 'NEUTRAL')
         ad_ratio = _safe_num(market_status.get('breadth', {}).get('advance_decline_ratio'))
         pct_above_200 = _safe_num(market_status.get('breadth', {}).get('percent_above_200sma'))
         
@@ -1322,28 +1219,28 @@ class NewsletterGenerator:
         content.append(f"- **Headline:** {snapshot_headline}")
 
         strip = []
-        for symbol in ['SPY', 'QQQ', 'DIA', 'IWM']:
+        for symbol in ['^NSEI', '^NSEBANK', '^CNXIT', '^NSEJRNI']:
             data = market_snapshot.get(symbol, {})
             if data:
                 change = _safe_num(data.get('change_pct', 0.0), 0.0)
                 arrow = '▲' if change >= 0 else '▼'
-                strip.append(f"{symbol} {arrow} {change:+.2f}%")
-            elif symbol == 'SPY' and 'S&P 500' in index_perf:
-                change = index_perf['S&P 500']
+                strip.append(f"{symbol.replace('^', '')} {arrow} {change:+.2f}%")
+            elif symbol == '^NSEI' and 'Nifty 50' in index_perf:
+                change = index_perf['Nifty 50']
                 arrow = '▲' if change >= 0 else '▼'
-                strip.append(f"SPY {arrow} {change:+.2f}%")
-            elif symbol == 'QQQ' and 'NASDAQ 100' in index_perf:
-                change = index_perf['NASDAQ 100']
+                strip.append(f"NSEI {arrow} {change:+.2f}%")
+            elif symbol == '^NSEBANK' and 'Bank Nifty' in index_perf:
+                change = index_perf['Bank Nifty']
                 arrow = '▲' if change >= 0 else '▼'
-                strip.append(f"QQQ {arrow} {change:+.2f}%")
-            elif symbol == 'DIA' and 'Dow Jones' in index_perf:
-                change = index_perf['Dow Jones']
+                strip.append(f"BANK {arrow} {change:+.2f}%")
+            elif symbol == '^CNXIT' and 'Nifty IT' in index_perf:
+                change = index_perf['Nifty IT']
                 arrow = '▲' if change >= 0 else '▼'
-                strip.append(f"DIA {arrow} {change:+.2f}%")
-            elif symbol == 'IWM' and 'Russell 2000' in index_perf:
-                change = index_perf['Russell 2000']
+                strip.append(f"IT {arrow} {change:+.2f}%")
+            elif symbol == '^NSEJRNI' and 'Nifty Next 50' in index_perf:
+                change = index_perf['Nifty Next 50']
                 arrow = '▲' if change >= 0 else '▼'
-                strip.append(f"IWM {arrow} {change:+.2f}%")
+                strip.append(f"NEXT50 {arrow} {change:+.2f}%")
         if strip:
             content.append(f"- **Index Strip:** {' | '.join(strip)}")
 
@@ -1375,7 +1272,7 @@ class NewsletterGenerator:
             sentiment_label = "Greed" if sentiment_score > 60 else "Fear" if sentiment_score < 40 else "Neutral"
         
         content.append(f"- **Sentiment Gauge:** {sentiment_score:.1f}/100 ({sentiment_label})")
-        content.append(f"- **SPY Trend Regime:** {spy_trend}")
+        content.append(f"- **Nifty 50 Trend Regime:** {bench_trend}")
         if ad_ratio > 0:
             content.append(f"- **Advance/Decline Ratio:** {ad_ratio:.2f}")
         if pct_above_200 > 0:
@@ -1508,13 +1405,8 @@ class NewsletterGenerator:
                 score = _safe_num(idea.get('score'))
                 price = _safe_num(self._authoritative_idea_price(idea))
                 thesis = idea.get('fundamental_snapshot') or "Technical and fundamental signals are aligned."
-                content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price ${price:.2f}")
+                content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price {price:.2f}")
                 content.append(f"   - Thesis: {thesis}")
-                snap = next((x for x in sentiment_snaps.get("top_buys", []) if x.get("ticker") == ticker), None)
-                if snap:
-                    content.append(
-                        f"   - Finnhub Signal Check: bullish {snap.get('bullish_pct', 0.0):.1f}% | bearish {snap.get('bearish_pct', 0.0):.1f}% | buzz {snap.get('buzz', 0.0):.2f}"
-                    )
             content.append("")
 
         if top_sells:
@@ -1524,14 +1416,31 @@ class NewsletterGenerator:
                 score = _safe_num(idea.get('score'))
                 price = _safe_num(self._authoritative_idea_price(idea))
                 reason = idea.get('reason') or "Momentum deterioration or risk-control trigger."
-                content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price ${price:.2f}")
+                content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price {price:.2f}")
                 content.append(f"   - Exit Logic: {reason}")
-                snap = next((x for x in sentiment_snaps.get("top_sells", []) if x.get("ticker") == ticker), None)
-                if snap:
-                    content.append(
-                        f"   - Finnhub Signal Check: bullish {snap.get('bullish_pct', 0.0):.1f}% | bearish {snap.get('bearish_pct', 0.0):.1f}% | news score {snap.get('company_news_score', 0.0):.2f}"
-                    )
             content.append("")
+
+        # --- SECTION: ADVANCED TECHNICAL SIGNALS ---
+        content.append("## 🔬 Advanced Technical Signals")
+        content.append("Focus on stocks showing high-probability price behavior and structural patterns.")
+        content.append("")
+        
+        # Combine all relevant ideas to show their signal profile
+        all_ideas = (top_buys or [])[:5] + (top_sells or [])[:5]
+        if all_ideas:
+            for idea in all_ideas:
+                ticker = idea.get('ticker', 'N/A')
+                signals = idea.get('technical_signals', {})
+                if signals and any(signals.values()):
+                    content.append(f"#### {ticker}")
+                    for cat, sig_list in signals.items():
+                        if sig_list:
+                            cat_label = cat.replace('_', ' ').title()
+                            content.append(f"- **{cat_label}:** {', '.join(sig_list)}")
+                    content.append("")
+        else:
+            content.append("- No specific technical patterns detected in high-scoring candidates.")
+        content.append("")
 
         if fund_performance_md:
             content.append("## 3) Fund Performance Snapshot")

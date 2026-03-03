@@ -1,0 +1,22 @@
+2026-03-03 10:24:30,790 - __main__ - INFO - Configuration: 5 workers ╫ 5.0 TPS = ~25.0 TPS effective
+2026-03-03 10:24:30,791 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only, cache_dir=./data/fundamentals_cache)
+2026-03-03 10:24:30,794 - src.data.nse_fetcher - INFO - NSEFetcher initialized
+2026-03-03 10:24:30,794 - src.data.universe_fetcher - INFO - StockUniverseFetcher initialized (NSE India)
+2026-03-03 10:24:30,794 - __main__ - INFO - Fetching stock universe...
+2026-03-03 10:24:30,796 - src.data.universe_fetcher - INFO - Loaded 501 NSE symbols from cache
+2026-03-03 10:24:30,797 - __main__ - INFO - Universe: 501 stocks (source preference: exchange)
+2026-03-03 10:24:30,797 - __main__ - INFO - LIMITED MODE: 5 stocks
+2026-03-03 10:24:30,800 - src.data.fetcher - INFO - YahooFinanceFetcher initialized with cache_dir: ./data/cache
+2026-03-03 10:24:30,800 - src.data.enhanced_fundamentals - INFO - EnhancedFundamentalsFetcher initialized (yfinance-only, cache_dir=./data/fundamentals_cache)
+2026-03-03 10:24:30,801 - src.screening.optimized_batch_processor - INFO - OptimizedBatchProcessor initialized
+2026-03-03 10:24:30,801 - src.screening.optimized_batch_processor - INFO - Workers: 5, Delay: 0.2s
+2026-03-03 10:24:30,801 - src.screening.optimized_batch_processor - INFO - Effective rate: ~25.0 TPS
+2026-03-03 10:24:30,801 - __main__ - INFO - Using standard yfinance fundamentals.
+2026-03-03 10:24:30,801 - __main__ - ERROR - Fatal error: 'Namespace' object has no attribute 'download_sec'
+Traceback (most recent call last):
+  File "C:\Users\Tirtub\Desktop\Downloads\stock-screener-long-hold\run_optimized_scan.py", line 461, in main
+    if args.download_sec:
+       ^^^^^^^^^^^^^^^^^
+AttributeError: 'Namespace' object has no attribute 'download_sec'
+2026-03-03 10:24:30,805 - src.notifications.email_notifier - INFO - Email notifications enabled - will send to tirthmehta8994@gmail.com
+2026-03-03 10:24:33,807 - src.notifications.email_notifier - INFO - \u2705 Error alert sent to tirthmehta8994@gmail.com
