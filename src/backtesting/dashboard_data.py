@@ -58,7 +58,7 @@ def fetch_price_history(symbol: str, from_date: date, to_date: date, download_fo
     if NSE is None:
         raise ImportError("nse package not installed. Install `nse[local]`.")
 
-    with NSE(download_folder=download_folder, server=False, timeout=15) as nse:
+    with NSE(download_folder=download_folder, server=False, timeout=30) as nse:
         rows = nse.fetch_equity_historical_data(symbol=symbol, from_date=from_date, to_date=to_date, series="EQ")
 
     if not rows:
@@ -87,6 +87,71 @@ def fetch_price_history(symbol: str, from_date: date, to_date: date, download_fo
     df = df.dropna().sort_values("date")
     _save_price_to_cache(df, symbol, from_date, to_date)
     return df
+
+
+def fetch_nse_equity_universe() -> List[str]:
+    """Fetch all NSE equity symbols via official CSV with safe fallbacks."""
+    urls = [
+        "https://archives.nseindia.com/content/equities/EQUITY_L.csv",
+        "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv",
+    ]
+    for url in urls:
+        try:
+            df = pd.read_csv(url)
+            if "SYMBOL" in df.columns:
+                symbols = [str(s).strip().upper() for s in df["SYMBOL"].dropna().tolist()]
+                symbols = [s for s in symbols if s and s not in {"NIFTY", "NA"}]
+                if symbols:
+                    return sorted(set(symbols))
+        except Exception:
+            continue
+
+
+    cache_candidates = [
+        Path("data/cache/nse_equity_universe.pkl"),
+        Path("data/cache/nse_stock_universe.pkl"),
+    ]
+    for cache_file in cache_candidates:
+        if cache_file.exists():
+            try:
+                import pickle
+
+                payload = pickle.loads(cache_file.read_bytes())
+                symbols = payload.get("symbols", []) if isinstance(payload, dict) else []
+                cleaned = []
+                for sym in symbols:
+                    s = str(sym).replace(".NS", "").strip().upper()
+                    if s:
+                        cleaned.append(s)
+                if cleaned:
+                    return sorted(set(cleaned))
+            except Exception:
+                continue
+
+    if NSE is not None:
+        index_fallbacks = ["NIFTY 500", "NIFTY MIDCAP 150", "NIFTY SMALLCAP 250"]
+        merged: List[str] = []
+        try:
+            with NSE(download_folder="data/nse_downloads", server=False, timeout=30) as nse:
+                for index_name in index_fallbacks:
+                    try:
+                        response = nse.listEquityStocksByIndex(index_name)
+                        if isinstance(response, dict) and "data" in response:
+                            merged.extend(
+                                str(item.get("symbol", "")).strip().upper()
+                                for item in response["data"]
+                                if isinstance(item, dict)
+                            )
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        merged = [s for s in merged if s]
+        if merged:
+            return sorted(set(merged))
+
+    return []
 
 
 def scalar_kalman_filter(values: np.ndarray, q: float = 1e-4, r: float = 1e-2) -> np.ndarray:
@@ -171,25 +236,40 @@ def run_backtests(symbols: List[str], benchmark_symbol: str = "NIFTY 50") -> Dic
 
     equities: Dict[str, pd.Series] = {}
     rows: List[Dict[str, object]] = []
+    errors: List[str] = []
+    usable_symbols: List[str] = []
 
     for symbol in symbols:
-        px = fetch_price_history(symbol, from_date, to_date)
-        signal = sepa_vcp_signal(px)
-        eq, trades = backtest_long_only(px, signal)
-        equities[f"SEPA_VCP_{symbol}"] = pd.Series(eq.values, index=px["date"])
-        m = _metric_from_equity(eq, trades, "SEPA_VCP", symbol)
-        rows.append(m.__dict__)
+        try:
+            px = fetch_price_history(symbol, from_date, to_date)
+            if px.empty or len(px) < 252:
+                errors.append(f"{symbol}: insufficient history for backtest")
+                continue
+            signal = sepa_vcp_signal(px)
+            eq, trades = backtest_long_only(px, signal)
+            equities[f"SEPA_VCP_{symbol}"] = pd.Series(eq.values, index=px["date"])
+            m = _metric_from_equity(eq, trades, "SEPA_VCP", symbol)
+            rows.append(m.__dict__)
+            usable_symbols.append(symbol)
+        except Exception as exc:
+            errors.append(f"{symbol}: {exc}")
 
-    if len(symbols) >= 2:
-        p1 = fetch_price_history(symbols[0], from_date, to_date)
-        p2 = fetch_price_history(symbols[1], from_date, to_date)
-        merged = p1[["date", "close"]].merge(p2[["date", "close"]], on="date", suffixes=("_a", "_b")).dropna()
-        eq_k, trades_k = kalman_dynamic_hedge_backtest(merged["close_a"], merged["close_b"])
-        equities[f"KALMAN_PAIR_{symbols[0]}_{symbols[1]}"] = pd.Series(eq_k.values, index=merged["date"])
-        m = _metric_from_equity(eq_k, trades_k, "KALMAN_PAIR", f"{symbols[0]}/{symbols[1]}")
-        rows.append(m.__dict__)
+    if len(usable_symbols) >= 2:
+        try:
+            p1 = fetch_price_history(usable_symbols[0], from_date, to_date)
+            p2 = fetch_price_history(usable_symbols[1], from_date, to_date)
+            merged = p1[["date", "close"]].merge(p2[["date", "close"]], on="date", suffixes=("_a", "_b")).dropna()
+            if len(merged) >= 120:
+                eq_k, trades_k = kalman_dynamic_hedge_backtest(merged["close_a"], merged["close_b"])
+                equities[f"KALMAN_PAIR_{usable_symbols[0]}_{usable_symbols[1]}"] = pd.Series(eq_k.values, index=merged["date"])
+                m = _metric_from_equity(eq_k, trades_k, "KALMAN_PAIR", f"{usable_symbols[0]}/{usable_symbols[1]}")
+                rows.append(m.__dict__)
+        except Exception as exc:
+            errors.append(f"Kalman pair failed: {exc}")
 
-    df_metrics = pd.DataFrame(rows).sort_values("sharpe", ascending=False)
+    df_metrics = pd.DataFrame(rows)
+    if not df_metrics.empty:
+        df_metrics = df_metrics.sort_values("sharpe", ascending=False)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_json = RESULTS_DIR / f"backtest_results_{stamp}.json"
@@ -198,6 +278,8 @@ def run_backtests(symbols: List[str], benchmark_symbol: str = "NIFTY 50") -> Dic
     payload = {
         "generated_at": datetime.now().isoformat(),
         "symbols": symbols,
+        "processed_symbols": usable_symbols,
+        "errors": errors,
         "metrics": df_metrics.to_dict(orient="records"),
     }
     out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -208,6 +290,8 @@ def run_backtests(symbols: List[str], benchmark_symbol: str = "NIFTY 50") -> Dic
         "equities": equities,
         "json": str(out_json),
         "csv": str(out_csv),
+        "errors": errors,
+        "processed_symbols": usable_symbols,
     }
 
 
@@ -218,22 +302,29 @@ def compute_piotroski_proxy(symbols: List[str], window: int = 252) -> pd.DataFra
     records = []
 
     for symbol in symbols:
-        px = fetch_price_history(symbol, from_date, to_date)
-        close = px["close"]
-        ret = close.pct_change()
-        vol = px["volume"]
+        try:
+            px = fetch_price_history(symbol, from_date, to_date)
+            if px.empty or len(px) < 200:
+                continue
+            close = px["close"]
+            ret = close.pct_change()
+            vol = px["volume"]
 
-        score = 0
-        score += int(ret.tail(window).mean() > 0)
-        score += int(ret.tail(63).mean() > ret.tail(126).mean())
-        score += int(close.iloc[-1] > close.rolling(200).mean().iloc[-1])
-        score += int(close.rolling(50).mean().iloc[-1] > close.rolling(200).mean().iloc[-1])
-        score += int(vol.tail(20).mean() > vol.tail(120).mean())
-        score += int(ret.tail(20).std() < ret.tail(120).std())
-        score += int(close.iloc[-1] > close.rolling(252).max().iloc[-2] * 0.9 if len(close) > 253 else 0)
-        score += int((ret.tail(20) > 0).sum() > 11)
-        score += int((ret.tail(5) > 0).sum() >= 3)
+            score = 0
+            score += int(ret.tail(window).mean() > 0)
+            score += int(ret.tail(63).mean() > ret.tail(126).mean())
+            score += int(close.iloc[-1] > close.rolling(200).mean().iloc[-1])
+            score += int(close.rolling(50).mean().iloc[-1] > close.rolling(200).mean().iloc[-1])
+            score += int(vol.tail(20).mean() > vol.tail(120).mean())
+            score += int(ret.tail(20).std() < ret.tail(120).std())
+            score += int(close.iloc[-1] > close.rolling(252).max().iloc[-2] * 0.9 if len(close) > 253 else 0)
+            score += int((ret.tail(20) > 0).sum() > 11)
+            score += int((ret.tail(5) > 0).sum() >= 3)
 
-        records.append({"symbol": symbol, "piotroski_proxy_f_score": int(score)})
+            records.append({"symbol": symbol, "piotroski_proxy_f_score": int(score)})
+        except Exception:
+            continue
 
+    if not records:
+        return pd.DataFrame(columns=["symbol", "piotroski_proxy_f_score"])
     return pd.DataFrame(records).sort_values("piotroski_proxy_f_score", ascending=False)
