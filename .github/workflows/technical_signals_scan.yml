@@ -1,0 +1,65 @@
+name: Standalone Technical Signals Scan
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Number of tickers to scan'
+        required: false
+        default: '250'
+      workers:
+        description: 'Parallel workers'
+        required: false
+        default: '8'
+
+jobs:
+  technical-signal-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🔎 Run standalone technical signal scan
+        run: |
+          mkdir -p logs
+          LIMIT="${{ github.event.inputs.limit || '250' }}"
+          WORKERS="${{ github.event.inputs.workers || '8' }}"
+          set -o pipefail
+          python run_technical_signals_scan.py --limit "$LIMIT" --workers "$WORKERS" 2>&1 | tee logs/technical_signals_scan.log
+
+      - name: 📊 Upload technical scan artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: technical-signals-scan-${{ github.run_number }}
+          path: |
+            data/technical_scans/*.txt
+            logs/technical_signals_scan.log
+          retention-days: 30
+
+      - name: ✅ Summary
+        if: always()
+        run: |
+          echo "## 🔬 Standalone Technical Signals Scan" >> $GITHUB_STEP_SUMMARY
+          if [ -f "data/technical_scans/latest_technical_scan.txt" ]; then
+            echo "- ✅ Report generated: data/technical_scans/latest_technical_scan.txt" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Preview" >> $GITHUB_STEP_SUMMARY
+            head -n 30 data/technical_scans/latest_technical_scan.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Report not generated" >> $GITHUB_STEP_SUMMARY
+          fi

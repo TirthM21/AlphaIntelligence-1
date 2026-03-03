@@ -46,7 +46,6 @@ from src.reporting.portfolio_manager import PortfolioManager
 from src.reporting.performance_tracker import PerformanceTracker
 from src.notifications.email_notifier import EmailNotifier
 from src.database.db_manager import DBManager
-from src.ai.ai_agent import AIAgent
 
 
 logging.basicConfig(
@@ -263,14 +262,6 @@ def save_report(results, buy_signals, sell_signals, benchmark_analysis, breadth,
             for reason in signal['reasons'][:7]:  # Show 7 instead of 5
                 output.append(f"  • {reason}")
 
-            # Technical Signals
-            tech_sigs = signal.get('technical_signals', {})
-            if any(tech_sigs.values()):
-                output.append("\nTechnical Signals:")
-                for cat, sig_list in tech_sigs.items():
-                    if sig_list:
-                        output.append(f"  • {cat.replace('_', ' ').title()}: {', '.join(sig_list)}")
-
             if signal.get('fundamental_snapshot'):
                 output.append(signal['fundamental_snapshot'])
 
@@ -331,14 +322,6 @@ def save_report(results, buy_signals, sell_signals, benchmark_analysis, breadth,
             output.append("\nSell Reasons:")
             for reason in signal['reasons'][:5]:
                 output.append(f"  • {reason}")
-
-            # Technical Signals
-            tech_sigs = signal.get('technical_signals', {})
-            if any(tech_sigs.values()):
-                output.append("\nTechnical Signals:")
-                for cat, sig_list in tech_sigs.items():
-                    if sig_list:
-                        output.append(f"  • {cat.replace('_', ' ').title()}: {', '.join(sig_list)}")
 
             if signal.get('fundamental_snapshot'):
                 output.append(signal['fundamental_snapshot'])
@@ -521,25 +504,13 @@ def main():
                     if signal['is_buy']:
                         preliminary_buys.append((analysis, signal))
 
-            # Sort and take top 15 for premium enrichment
+            # Sort and take top 15 candidates for final scoring
             preliminary_buys = sorted(preliminary_buys, key=lambda x: x[1]['score'], reverse=True)[:15]
-            
-            ai_agent = AIAgent()
-            
-            logger.info(f"Enriching top {len(preliminary_buys)} candidates with AI analysis...")
-            for analysis, signal in preliminary_buys:
-                ticker = analysis['ticker']
-                
-                # AI Assessment
-                ai_commentary = None
-                if ai_agent.api_key:
-                    ai_commentary = ai_agent.generate_commentary(ticker, {
-                        "price": analysis['current_price'],
-                        "technical_score": signal['score'],
-                        "fundamentals": analysis.get('quarterly_data', {})
-                    })
 
-                # Final Re-Score (The "Mixture")
+            logger.info(f"Final-scoring top {len(preliminary_buys)} buy candidates...")
+            for analysis, _ in preliminary_buys:
+                ticker = analysis['ticker']
+
                 final_signal = score_buy_signal(
                     ticker=ticker,
                     price_data=analysis['price_data'],
@@ -547,18 +518,16 @@ def main():
                     phase_info=analysis['phase_info'],
                     rs_series=analysis['rs_series'],
                     fundamentals=analysis.get('quarterly_data'),
-                    vcp_data=analysis.get('vcp_data'),
-                    premium_commentary=ai_commentary
+                    vcp_data=analysis.get('vcp_data')
                 )
-                
+
                 # Attach extras for the report
                 final_signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
                     ticker,
                     quarterly_data=analysis.get('quarterly_data', {})
                 )
-                final_signal['ai_commentary'] = ai_commentary
                 final_signal['technical_signals'] = analysis.get('technical_signals', {})
-                
+
                 buy_signals.append(final_signal)
 
         buy_signals = sorted(buy_signals, key=lambda x: x['score'], reverse=True)

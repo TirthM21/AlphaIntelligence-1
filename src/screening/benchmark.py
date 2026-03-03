@@ -243,17 +243,20 @@ def should_generate_signals(benchmark_analysis: Dict, breadth: Dict,
     regime = classify_market_regime(benchmark_analysis, breadth)
 
     # Determine if we should generate buy signals
-    should_buy = False
+    # NOTE: Buy signal scoring should always run. Market regime/breadth is used as context,
+    # not as a hard gate, otherwise strong setups can be hidden in weak tapes.
+    should_buy = True
     reasons = []
 
     if bench_phase in [2, 1]:
         if phase_2_pct >= min_phase2_pct:
-            should_buy = True
             reasons.append(f"Market breadth adequate ({phase_2_pct:.1f}% in Phase 2)")
         else:
-            reasons.append(f"Market breadth weak ({phase_2_pct:.1f}% in Phase 2, need {min_phase2_pct}%)")
+            reasons.append(
+                f"Market breadth weak ({phase_2_pct:.1f}% in Phase 2, need {min_phase2_pct}%) - buys still evaluated"
+            )
     else:
-        reasons.append(f"Nifty 50 in unfavorable phase ({bench_phase})")
+        reasons.append(f"Nifty 50 in unfavorable phase ({bench_phase}) - buys still evaluated")
 
     # Sell signals - always generate if applicable
     should_sell = True
