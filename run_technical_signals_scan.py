@@ -14,6 +14,7 @@ import yfinance as yf
 import pickle
 
 from src.data.universe_fetcher import StockUniverseFetcher
+from src.notifications.email_notifier import EmailNotifier
 from src.screening.signal_engine import analyze_technical_signals
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -143,16 +144,30 @@ def _render_report(results: List[Dict], output_dir: Path) -> Path:
     return report_path
 
 
+def _email_report(report_path: Path) -> bool:
+    """Email technical scan report as markdown/plain newsletter payload."""
+    notifier = EmailNotifier()
+    if not notifier.enabled:
+        logger.warning("Email notifier is not configured; skipping technical report email")
+        return False
+    return notifier.send_newsletter(
+        newsletter_path=str(report_path),
+        scan_report_path=str(report_path),
+        subject=f"📊 Standalone Technical Signals Scan | {datetime.now().strftime('%Y-%m-%d')}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Standalone technical signal category scan")
-    parser.add_argument("--limit", type=int, default=250, help="Limit universe size")
+    parser.add_argument("--limit", type=int, default=0, help="Limit universe size (0 = full universe)")
     parser.add_argument("--workers", type=int, default=8, help="Parallel workers")
     parser.add_argument("--include-etfs", action="store_true", help="Include ETFs universe")
+    parser.add_argument("--send-email", action="store_true", help="Email the generated technical report")
     parser.add_argument("--output-dir", default="./data/technical_scans", help="Output directory")
     args = parser.parse_args()
 
     universe = _load_tickers_with_fallback(include_etfs=args.include_etfs)
-    tickers = universe[: args.limit] if args.limit else universe
+    tickers = universe[: args.limit] if args.limit and args.limit > 0 else universe
     logger.info("Scanning %d tickers for technical categories...", len(tickers))
 
     results: List[Dict] = []
@@ -163,6 +178,13 @@ def main() -> None:
 
     report = _render_report(results, Path(args.output_dir))
     logger.info("Technical signal report written: %s", report)
+
+    if args.send_email:
+        sent = _email_report(report)
+        if sent:
+            logger.info("Technical signal report emailed successfully")
+        else:
+            logger.error("Technical signal report email failed")
 
 
 if __name__ == "__main__":

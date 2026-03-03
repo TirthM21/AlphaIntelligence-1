@@ -761,14 +761,6 @@ def main():
             except Exception as fallback_err:
                 logger.error(f"Failed to write degraded-mode fallback newsletter artifacts: {fallback_err}")
 
-        # NEW: Generate AI Deep-Dive Intelligence Report
-        try:
-            from run_ai_report import generate_deep_dive
-            logger.info("Generating AI Deep-Dive Intelligence Report...")
-            generate_deep_dive()
-        except Exception as ai_report_err:
-            logger.error(f"Failed to generate AI Deep-Dive Report: {ai_report_err}")
-
         logger.info("="*60)
 
         logger.info("="*60)

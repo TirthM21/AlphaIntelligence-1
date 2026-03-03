@@ -12,14 +12,6 @@ on:
   # Allow manual trigger
   workflow_dispatch:
     inputs:
-      use_fmp:
-        description: 'Use FMP enhanced fundamentals'
-        required: false
-        default: 'true'
-      download_sec:
-        description: 'Download SEC filings'
-        required: false
-        default: 'true'
       universe_source:
         description: 'Universe source (exchange or auto)'
         required: false
@@ -75,10 +67,6 @@ jobs:
       - name: 🔍 Run Daily Newsletter Scan
         id: daily_scan
         env:
-          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
-          FREE_LLM_API_KEY: ${{ secrets.FREE_LLM_API_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER || secrets.EMAIL_FROM }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT || secrets.EMAIL_TO }}
@@ -104,19 +92,6 @@ jobs:
 
           # Build command with options
           CMD="python run_optimized_scan.py --workers 3 --delay 0.5 --universe-source $UNIVERSE_SOURCE --send-email --strict-email"
-          
-          # Add FMP if enabled
-          if [ "${{ github.event.inputs.use_fmp || 'true' }}" = "true" ]; then
-            CMD="$CMD --use-fmp"
-            echo "✓ FMP enhanced fundamentals enabled"
-          fi
-          
-          # Add SEC downloads if enabled
-          if [ "${{ github.event.inputs.download_sec || 'true' }}" = "true" ]; then
-            CMD="$CMD --download-sec"
-            echo "✓ SEC filing downloads enabled"
-          fi
-          
           echo "✓ Email newsletter enabled (--send-email)"
           
           echo "Running: $CMD"
