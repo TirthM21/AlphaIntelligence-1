@@ -1,7 +1,7 @@
 """
 Long-term fundamentals data fetcher.
 
-Extends existing FMP infrastructure to fetch and cache 5-year historical data
+Fetches and caches long-horizon fundamentals data
 for ROIC, WACC, growth metrics, and capital efficiency analysis.
 """
 
@@ -45,10 +45,7 @@ class LongTermFundamentals:
 
 class LongTermFundamentalsFetcher:
     """
-    Fetch and cache 5-year fundamental data from FMP API.
-
-    Leverages existing FMP infrastructure, extending to 5-year history
-    and calculating long-term metrics (ROIC, WACC, growth rates).
+    Fetch and cache 5-year fundamental data from yfinance.
     """
 
     def __init__(
@@ -63,8 +60,6 @@ class LongTermFundamentalsFetcher:
             cache_dir: Directory to cache fundamental data
             cache_expiry_days: Days before cache expires (default 90)
         """
-        self.fmp = None
-        self.finnhub = None
         self.cache_dir = cache_dir
         self.cache_expiry_days = cache_expiry_days
 
@@ -97,37 +92,6 @@ class LongTermFundamentalsFetcher:
         try:
             # yfinance-only for all tickers
             return self._fetch_from_yfinance(ticker)
-
-            if not income_statements or not balance_sheets or not cash_flows:
-                logger.info(f"FMP unavailable/rate-limited, trying Finnhub for {ticker}")
-                finnhub_result = self._fetch_from_finnhub(ticker)
-                if finnhub_result:
-                    return finnhub_result
-                logger.info(f"Finnhub unavailable/incomplete, falling back to yfinance for {ticker}")
-                return self._fetch_from_yfinance(ticker)
-
-            logger.info(f"Using FMP fundamentals for {ticker}")
-
-            # Create fundamentals object
-            fundamentals = LongTermFundamentals(
-                ticker=ticker,
-                currency="USD",
-                income_statements=income_statements,
-                balance_sheets=balance_sheets,
-                cash_flows=cash_flows,
-                fetched_at=datetime.utcnow().isoformat()
-            )
-
-            # Calculate metrics
-            self._calculate_metrics(fundamentals)
-
-            # Cache the result
-            self._save_to_cache(fundamentals)
-
-            logger.info(f"✓ Fetched {ticker}: {len(income_statements)} Q, "
-                       f"quality={fundamentals.data_quality_score:.0f}%")
-
-            return fundamentals
 
         except Exception as e:
             logger.error(f"Error fetching fundamentals for {ticker}: {e}")
