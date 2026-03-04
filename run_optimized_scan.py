@@ -28,7 +28,8 @@ from pathlib import Path
 from collections import Counter
 
 # Force UTF-8 encoding for stdout to prevent Unicode crashes on Windows consoles
-if sys.stdout.encoding.lower() != 'utf-8':
+encoding = (sys.stdout.encoding or '').lower()
+if encoding != 'utf-8' and hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 from src.config.settings import SettingsValidationError, load_settings
