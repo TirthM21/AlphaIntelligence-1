@@ -41,7 +41,6 @@ from src.screening.benchmark import (
     format_benchmark_summary,
     should_generate_signals
 )
-from src.screening.signal_engine import score_buy_signal, score_sell_signal
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
 from src.data.event_calendar import load_event_calendar_model
 from src.reporting.newsletter_generator import NewsletterGenerator
@@ -51,6 +50,7 @@ from src.notifications.email_notifier import EmailNotifier
 from src.database.db_manager import DBManager
 from src.risk.portfolio_risk_engine import PortfolioRiskEngine
 from src.utils.logging_config import configure_logging
+from src.strategies.registry import available_strategies, create_strategy
 
 
 logger = logging.getLogger(__name__)
@@ -385,6 +385,8 @@ def main():
     parser.add_argument('--log-level', type=str, default=os.getenv('LOG_LEVEL', 'INFO'),
                         help='Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     parser.add_argument('--json-logs', action='store_true', help='Emit structured JSON logs')
+    parser.add_argument('--strategy', type=str, default='daily_momentum', choices=available_strategies(),
+                        help='Strategy adapter to use for signal generation')
 
     args = parser.parse_args()
     configure_logging(level=args.log_level, json_logs=args.json_logs)
@@ -499,54 +501,31 @@ def main():
         breadth = calculate_market_breadth(results['phase_results'])
         signal_rec = should_generate_signals(benchmark_analysis, breadth)
 
+        strategy = create_strategy(args.strategy)
+        logger.info(f"Using strategy adapter: {strategy.metadata().get('name', args.strategy)}")
+
+        strategy_payload = strategy.generate_signals({
+            'analyses': results.get('analyses', []),
+        })
+
         # Buy signals
         buy_signals = []
         if signal_rec['should_generate_buys']:
-            preliminary_buys = []
-            for analysis in results['analyses']:
-                if analysis['phase_info']['phase'] in [1, 2]:
-                    # Quick preliminary score
-                    signal = score_buy_signal(
-                        ticker=analysis['ticker'],
-                        price_data=analysis['price_data'],
-                        current_price=analysis['current_price'],
-                        phase_info=analysis['phase_info'],
-                        rs_series=analysis['rs_series'],
-                        fundamentals=analysis.get('quarterly_data'),
-                        vcp_data=analysis.get('vcp_data')
-                    )
-                    if signal['is_buy']:
-                        preliminary_buys.append((analysis, signal))
-
-            # Sort and take top 15 candidates for final scoring
-            preliminary_buys = sorted(preliminary_buys, key=lambda x: x[1]['score'], reverse=True)[:15]
-
-            logger.info(f"Final-scoring top {len(preliminary_buys)} buy candidates...")
-            for analysis, _ in preliminary_buys:
-                ticker = analysis['ticker']
-
-                final_signal = score_buy_signal(
-                    ticker=ticker,
-                    price_data=analysis['price_data'],
-                    current_price=analysis['current_price'],
-                    phase_info=analysis['phase_info'],
-                    rs_series=analysis['rs_series'],
-                    fundamentals=analysis.get('quarterly_data'),
-                    vcp_data=analysis.get('vcp_data')
-                )
-
-                # Attach extras for the report
-                final_signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
+            normalized_buys = strategy_payload.get('signals', {}).get('buy', [])
+            for normalized_signal in normalized_buys:
+                signal = normalized_signal.get('raw', normalized_signal)
+                ticker = signal.get('ticker', '')
+                analysis = next((a for a in results.get('analyses', []) if a.get('ticker') == ticker), {})
+                signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
                     ticker,
                     quarterly_data=analysis.get('quarterly_data', {})
                 )
-                final_signal['technical_signals'] = analysis.get('technical_signals', {})
-
-                adjusted_signal = event_calendar.apply_to_signal(final_signal)
+                signal['technical_signals'] = analysis.get('technical_signals', {})
+                adjusted_signal = event_calendar.apply_to_signal(signal)
                 if adjusted_signal is not None:
                     buy_signals.append(adjusted_signal)
 
-        buy_signals = sorted(buy_signals, key=lambda x: x['score'], reverse=True)
+        buy_signals = sorted(buy_signals, key=lambda x: x.get('score', 0), reverse=True)
 
         # Portfolio-level risk controls (run before downstream reporting/newsletter)
         risk_engine = PortfolioRiskEngine()
@@ -563,27 +542,19 @@ def main():
         # Sell signals
         sell_signals = []
         if signal_rec['should_generate_sells']:
-            for analysis in results['analyses']:
-                if analysis['phase_info']['phase'] in [3, 4]:
-                    signal = score_sell_signal(
-                        ticker=analysis['ticker'],
-                        price_data=analysis['price_data'],
-                        current_price=analysis['current_price'],
-                        phase_info=analysis['phase_info'],
-                        rs_series=analysis['rs_series'],
-                        fundamentals=analysis.get('quarterly_data')  # Pass raw quarterly data, not analyzed
-                    )
-                    if signal['is_sell']:
-                        # Add fundamental snapshot
-                        signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
-                            analysis['ticker'],
-                            quarterly_data=analysis.get('quarterly_data', {})
-                        )
-                        signal['technical_signals'] = analysis.get('technical_signals', {})
-                        risk_assessment = event_calendar.assess_symbol(signal.get('ticker', ''))
-                        signal['event_risk_level'] = risk_assessment.risk_level
-                        signal['event_risk_reason'] = risk_assessment.reason_text
-                        sell_signals.append(signal)
+            normalized_sells = strategy_payload.get('signals', {}).get('sell', [])
+            for norm_signal in normalized_sells:
+                signal = norm_signal.get('raw', norm_signal)
+                analysis = next((a for a in results.get('analyses', []) if a.get('ticker') == signal.get('ticker')), {})
+                signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
+                    signal.get('ticker', ''),
+                    quarterly_data=analysis.get('quarterly_data', {})
+                )
+                signal['technical_signals'] = analysis.get('technical_signals', {})
+                risk_assessment = event_calendar.assess_symbol(signal.get('ticker', ''))
+                signal['event_risk_level'] = risk_assessment.risk_level
+                signal['event_risk_reason'] = risk_assessment.reason_text
+                sell_signals.append(signal)
 
         sell_signals = sorted(sell_signals, key=lambda x: x['score'], reverse=True)
 
