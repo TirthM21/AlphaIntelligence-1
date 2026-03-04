@@ -71,7 +71,7 @@ EMAIL_RECIPIENT=recipient@email.com
 | **Daily Market Scan** | `python run_optimized_scan.py --limit 50` |
 | **Scan + Email Delivery** | `python run_optimized_scan.py --limit 50 --send-email` |
 | **System Diagnostics** | `python run_optimized_scan.py --diagnostics` |
-| **Test Email Pipeline** | `python test_email_full.py` |
+| **Test Email Pipeline** | `python scripts/diagnostics/test_email_full.py` |
 | **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --workers 8 --send-email` |
 | **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
@@ -81,6 +81,21 @@ EMAIL_RECIPIENT=recipient@email.com
 > **Command example consistency note:** examples above are NSE-first and represent the current production target.
 
 
+
+
+
+## ✅ Testing Workflows
+
+| Path | Command | Notes |
+| :--- | :--- | :--- |
+| **Automated CI tests (deterministic/offline-capable)** | `pytest` | Runs tests in `tests/` only, with `network`-marked tests skipped by default via `pytest.ini`. |
+| **Optional manual diagnostics (network/live-service checks)** | `python scripts/diagnostics/test_ai_agent.py`<br>`python scripts/diagnostics/test_email_full.py`<br>`python scripts/diagnostics/comprehensive_system_test.py` | For ad-hoc health checks that may require API keys, internet access, and live providers. |
+
+To explicitly include network tests in pytest runs, use:
+
+```bash
+pytest -m "network or not network"
+```
 
 
 ## 📰 Newsletter Data Sources & Priority
