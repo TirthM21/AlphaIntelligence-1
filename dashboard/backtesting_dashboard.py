@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 import streamlit as st
+
+from src.utils.logging_config import configure_logging
 
 from src.backtesting.dashboard_data import (
     compute_piotroski_proxy,
     fetch_nse_equity_universe,
     run_backtests,
 )
+
+configure_logging(level=os.getenv("LOG_LEVEL", "INFO"), json_logs=os.getenv("LOG_FORMAT", "text").lower() == "json")
 
 st.set_page_config(page_title="AlphaIntelligence Backtesting Dashboard", layout="wide")
 

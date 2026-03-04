@@ -26,10 +26,6 @@ from src.data.git_storage_fetcher import GitStorageFetcher
 from ..screening.phase_indicators import classify_phase, calculate_relative_strength, detect_vcp_pattern
 from ..screening.signal_engine import analyze_technical_signals
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 

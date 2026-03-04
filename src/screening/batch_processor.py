@@ -22,10 +22,6 @@ from src.data.fundamentals_fetcher import fetch_quarterly_financials, analyze_fu
 from ..screening.phase_indicators import classify_phase, calculate_relative_strength
 from ..screening.signal_engine import score_buy_signal, score_sell_signal
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 

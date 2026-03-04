@@ -55,5 +55,22 @@ python run_optimized_scan.py --limit 50 --workers 1 --delay 2.0
 python comprehensive_system_test.py
 ```
 
+### Logging Configuration
+Use centralized logging bootstrap (`src/utils/logging_config.py`) from executable entrypoints.
+
+- Environment variables:
+  - `LOG_LEVEL` → `DEBUG|INFO|WARNING|ERROR|CRITICAL` (default: `INFO`)
+  - `LOG_FORMAT` → `text|json` (default: `text`)
+- CLI flags (supported by primary entry scripts):
+  - `--log-level INFO`
+  - `--json-logs`
+
+Examples:
+```powershell
+python run_optimized_scan.py --log-level DEBUG --json-logs
+python run_derivatives_dashboard.py --log-level INFO
+python run_backtesting_workflow.py --log-level WARNING
+```
+
 ---
 *Last Updated: February 15, 2026*
