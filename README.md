@@ -66,6 +66,7 @@ EMAIL_RECIPIENT=recipient@email.com
 | **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
 | **Backtesting + Email Workflow** | `python run_backtesting_workflow.py --symbols RELIANCE,HDFCBANK,TCS,INFY --send-email` |
+| **Walk-forward Experiment Runner** | `python run_walk_forward_experiments.py --symbol RELIANCE --years 5 --db-path experiments/metrics.db` |
 
 
 
