@@ -46,12 +46,9 @@ from src.reporting.portfolio_manager import PortfolioManager
 from src.reporting.performance_tracker import PerformanceTracker
 from src.notifications.email_notifier import EmailNotifier
 from src.database.db_manager import DBManager
+from src.utils.logging_config import configure_logging
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
@@ -381,8 +378,12 @@ def main():
                         help='Universe source preference (default: exchange)')
     parser.add_argument('--prefetch-storage', action='store_true', help='Warm git storage fundamentals before scan')
     parser.add_argument('--no-prefetch-storage', action='store_true', help='Skip warm-up storage pass before scan')
+    parser.add_argument('--log-level', type=str, default=os.getenv('LOG_LEVEL', 'INFO'),
+                        help='Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+    parser.add_argument('--json-logs', action='store_true', help='Emit structured JSON logs')
 
     args = parser.parse_args()
+    configure_logging(level=args.log_level, json_logs=args.json_logs)
 
     # By default, prefetch storage when git-storage mode is used
     args.prefetch_storage = (args.prefetch_storage or args.git_storage) and not args.no_prefetch_storage

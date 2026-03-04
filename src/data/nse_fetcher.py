@@ -8,10 +8,6 @@ from typing import Dict, List, Optional
 import pandas as pd
 from nse import NSE
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 class NSEFetcher:

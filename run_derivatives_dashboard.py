@@ -8,8 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from src.reporting.derivatives_dashboard import NSEDerivativesDashboard
+from src.utils.logging_config import configure_logging
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +48,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="NSE derivatives dashboard generator")
     parser.add_argument("--symbols", type=str, default="nifty,banknifty,reliance", help="Comma-separated symbols")
     parser.add_argument("--output-dir", type=str, default="./data/derivatives", help="Output directory")
+    parser.add_argument("--log-level", type=str, default="INFO", help="Log level")
+    parser.add_argument("--json-logs", action="store_true", help="Emit structured JSON logs")
     args = parser.parse_args()
+
+    configure_logging(level=args.log_level, json_logs=args.json_logs)
 
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
 
