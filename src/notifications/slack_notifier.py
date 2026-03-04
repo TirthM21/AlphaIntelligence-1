@@ -199,6 +199,67 @@ class SlackNotifier:
             logger.error(f"Failed to send Slack message: {e}")
             return False
 
+    def send_drift_alert(self, snapshot: Dict) -> bool:
+        """Send a drift-monitoring alert for threshold breaches."""
+        alerts = snapshot.get("alerts", [])
+        if not alerts:
+            logger.info("No drift alerts to send")
+            return True
+
+        blocks = self._format_drift_blocks(snapshot)
+        if self.webhook_url:
+            return self._send_via_webhook(blocks)
+        if self.client:
+            return self._send_via_bot(blocks)
+        logger.error("Slack not configured properly")
+        return False
+
+    def _format_drift_blocks(self, snapshot: Dict) -> List[Dict]:
+        """Format drift snapshot into Slack block payload."""
+        report_date = snapshot.get("date", datetime.now().date().isoformat())
+        alerts = snapshot.get("alerts", [])
+
+        blocks: List[Dict] = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🚨 Data Drift Alert - {report_date}"
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"Detected *{len(alerts)}* feature drift alert(s).",
+                },
+            },
+            {"type": "divider"},
+        ]
+
+        for alert in alerts:
+            feature = alert.get("feature")
+            psi = alert.get("psi")
+            ks = alert.get("ks")
+            zscore = alert.get("zscore")
+
+            metric_text = f"*{feature}*"
+            if psi is not None:
+                metric_text += f"\n• PSI: {psi:.3f}"
+            if ks is not None:
+                metric_text += f" | KS: {ks:.3f}"
+            if zscore is not None:
+                metric_text += f" | Z: {zscore:.2f}"
+
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": metric_text},
+                }
+            )
+
+        return blocks
+
     def _send_via_webhook(self, blocks: List[Dict]) -> bool:
         """Send message via webhook URL.
 

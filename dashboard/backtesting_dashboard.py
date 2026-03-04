@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import streamlit as st
 
+from src.monitoring.drift import load_drift_dashboard_payload
 from src.utils.logging_config import configure_logging
 
 from src.backtesting.dashboard_data import (
@@ -83,6 +84,26 @@ if run_btn:
             st.subheader("Symbol Processing Errors")
             st.caption("These symbols were skipped due to missing/insufficient data or API failures.")
             st.dataframe(pd.DataFrame({"error": data["errors"]}), use_container_width=True)
+
+
+
+        st.subheader("Data Drift Monitoring")
+        drift_path = "data/monitoring/drift_snapshots.jsonl"
+        drift_payload = load_drift_dashboard_payload(drift_path, limit=60)
+        drift_summary = drift_payload["summary"]
+        if drift_summary["num_snapshots"] == 0:
+            st.info("No drift snapshots available yet.")
+        else:
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Drift Snapshots", drift_summary["num_snapshots"])
+            with c2:
+                st.metric("Latest Drift Date", drift_summary["latest_date"])
+            with c3:
+                st.metric("Active Drift Alerts", drift_summary["active_alerts"])
+
+            drift_timeseries = drift_payload["timeseries"]
+            st.dataframe(drift_timeseries, use_container_width=True)
 
         st.info(
             f"Saved metrics CSV: {data['csv']}\n\n"
