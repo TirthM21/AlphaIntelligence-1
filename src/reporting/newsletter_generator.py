@@ -201,6 +201,11 @@ class NewsletterGenerator:
             return 0.0
         return float(price)
 
+    def _format_event_risk_note(self, idea: Dict) -> str:
+        level = str(idea.get("event_risk_level") or "none").lower()
+        reason = str(idea.get("event_risk_reason") or "No near-term event risk detected.")
+        return f"Event Risk ({level.upper()}): {reason}"
+
     def _load_newsletter_state(self) -> Dict:
         if not self.newsletter_state_path.exists():
             return {"runs": []}
@@ -1413,6 +1418,7 @@ class NewsletterGenerator:
                 thesis = idea.get('fundamental_snapshot') or "Technical and fundamental signals are aligned."
                 content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price {price:.2f}")
                 content.append(f"   - Thesis: {thesis}")
+                content.append(f"   - {self._format_event_risk_note(idea)}")
             content.append("")
 
         if top_sells:
@@ -1424,6 +1430,7 @@ class NewsletterGenerator:
                 reason = idea.get('reason') or "Momentum deterioration or risk-control trigger."
                 content.append(f"{i}. **{ticker}** — Score {score:.1f} | Price {price:.2f}")
                 content.append(f"   - Exit Logic: {reason}")
+                content.append(f"   - {self._format_event_risk_note(idea)}")
             content.append("")
 
 

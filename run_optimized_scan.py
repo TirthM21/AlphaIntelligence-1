@@ -43,6 +43,7 @@ from src.screening.benchmark import (
 )
 from src.screening.signal_engine import score_buy_signal, score_sell_signal
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
+from src.data.event_calendar import load_event_calendar_model
 from src.reporting.newsletter_generator import NewsletterGenerator
 from src.reporting.portfolio_manager import PortfolioManager
 from src.reporting.performance_tracker import PerformanceTracker
@@ -432,6 +433,7 @@ def main():
 
     # Initialize enhanced fundamentals fetcher
     fundamentals_fetcher = EnhancedFundamentalsFetcher()
+    event_calendar = load_event_calendar_model("config.yaml")
 
     try:
         # Fetch universe
@@ -539,7 +541,9 @@ def main():
                 )
                 final_signal['technical_signals'] = analysis.get('technical_signals', {})
 
-                buy_signals.append(final_signal)
+                adjusted_signal = event_calendar.apply_to_signal(final_signal)
+                if adjusted_signal is not None:
+                    buy_signals.append(adjusted_signal)
 
         buy_signals = sorted(buy_signals, key=lambda x: x['score'], reverse=True)
 
@@ -563,6 +567,9 @@ def main():
                             quarterly_data=analysis.get('quarterly_data', {})
                         )
                         signal['technical_signals'] = analysis.get('technical_signals', {})
+                        risk_assessment = event_calendar.assess_symbol(signal.get('ticker', ''))
+                        signal['event_risk_level'] = risk_assessment.risk_level
+                        signal['event_risk_reason'] = risk_assessment.reason_text
                         sell_signals.append(signal)
 
         sell_signals = sorted(sell_signals, key=lambda x: x['score'], reverse=True)

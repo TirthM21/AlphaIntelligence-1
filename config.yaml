@@ -76,6 +76,23 @@ output:
   save_to_file: true
   output_dir: "./data/results"
 
+# Event Risk Controls (earnings + macro windows)
+event_risk:
+  enabled: true
+  earnings_window_days: 3
+  macro_window_days: 2
+  block_entry_levels: [high]
+  downweight:
+    medium: 0.85
+    high: 0.65
+  # Optional mocked payload path for deterministic runs/tests
+  mock_payload_path: null
+  # Inline fallback payload used when no external payload path is configured
+  mock_payload:
+    earnings: []
+    macro_events: []
+
+
 # Newsletter Data Source Priority Matrix
 newsletter:
   providers:
