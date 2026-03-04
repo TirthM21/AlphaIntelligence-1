@@ -5,7 +5,6 @@ and maintains a daily-updated universe for screening.
 """
 
 import logging
-import os
 import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -29,9 +28,15 @@ class StockUniverseFetcher:
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_file = self.cache_dir / "nse_stock_universe.pkl"
+        # Backward-compatible alias for the default equity universe cache path.
+        self.cache_file = self._get_cache_file(include_etfs=False)
         self.nse = NSEFetcher()
         logger.info("StockUniverseFetcher initialized (NSE India)")
+
+    def _get_cache_file(self, include_etfs: bool = False) -> Path:
+        """Get cache file path for the selected universe type."""
+        cache_key = "etf" if include_etfs else "equity"
+        return self.cache_dir / f"nse_{cache_key}_universe.pkl"
 
     def fetch_universe(self, force_refresh: bool = False, include_etfs: bool = False) -> List[str]:
         """Fetch the complete universe of NSE-listed stocks.
@@ -44,7 +49,7 @@ class StockUniverseFetcher:
             List of stock ticker symbols (with .NS suffix for yfinance).
         """
         cache_key = "etf" if include_etfs else "equity"
-        cache_file = self.cache_dir / f"nse_{cache_key}_universe.pkl"
+        cache_file = self._get_cache_file(include_etfs=include_etfs)
 
         if not force_refresh and cache_file.exists():
             cache_age = datetime.now() - datetime.fromtimestamp(
@@ -86,16 +91,22 @@ class StockUniverseFetcher:
         logger.info(f"Cached {len(yf_symbols)} NSE symbols")
         return yf_symbols
 
-    def get_universe_info(self) -> Dict:
-        """Get information about the cached universe."""
-        if not self.cache_file.exists():
+    def get_universe_info(self, include_etfs: bool = False) -> Dict:
+        """Get information about the cached universe.
+
+        Args:
+            include_etfs: Whether to return info for ETF universe cache.
+        """
+        cache_file = self._get_cache_file(include_etfs=include_etfs)
+
+        if not cache_file.exists():
             return {'cached': False, 'count': 0}
 
-        with open(self.cache_file, 'rb') as f:
+        with open(cache_file, 'rb') as f:
             cached_data = pickle.load(f)
 
         cache_age = datetime.now() - datetime.fromtimestamp(
-            self.cache_file.stat().st_mtime
+            cache_file.stat().st_mtime
         )
 
         return {
