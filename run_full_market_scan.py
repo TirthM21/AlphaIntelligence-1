@@ -32,9 +32,9 @@ from src.screening.benchmark import (
     format_benchmark_summary,
     should_generate_signals
 )
-from src.screening.signal_engine import score_buy_signal, score_sell_signal
 from src.data.fundamentals_fetcher import create_fundamental_snapshot
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
+from src.strategies.registry import available_strategies, create_strategy
 
 logging.basicConfig(
     level=logging.INFO,
@@ -255,6 +255,13 @@ def main():
         action='store_true',
         help='Use FMP for enhanced fundamentals on buy signals'
     )
+    parser.add_argument(
+        '--strategy',
+        type=str,
+        default='daily_momentum',
+        choices=available_strategies(),
+        help='Strategy adapter to use for signal generation'
+    )
 
     args = parser.parse_args()
 
@@ -316,29 +323,23 @@ def main():
         # Determine if we should generate signals
         signal_rec = should_generate_signals(benchmark_analysis, breadth)
 
+        strategy = create_strategy(args.strategy)
+        logger.info(f"Using strategy adapter: {strategy.metadata().get('name', args.strategy)}")
+        strategy_payload = strategy.generate_signals({'analyses': results.get('analyses', [])})
+
         # Score buy signals
         buy_signals = []
         if signal_rec['should_generate_buys']:
             logger.info("Scoring buy signals...")
-            for analysis in results['analyses']:
-                if analysis['phase_info']['phase'] in [1, 2]:
-                    buy_signal = score_buy_signal(
-                        ticker=analysis['ticker'],
-                        price_data=analysis['price_data'],
-                        current_price=analysis['current_price'],
-                        phase_info=analysis['phase_info'],
-                        rs_series=analysis['rs_series'],
-                        fundamentals=analysis.get('fundamental_analysis')
-                    )
-
-                    if buy_signal['is_buy']:
-                        # Use EnhancedFundamentalsFetcher if FMP is enabled
-                        buy_signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
-                            analysis['ticker'],
-                            quarterly_data=analysis.get('quarterly_data', {}),
-                            use_fmp=args.use_fmp
-                        )
-                        buy_signals.append(buy_signal)
+            for normalized_signal in strategy_payload.get('signals', {}).get('buy', []):
+                buy_signal = normalized_signal.get('raw', normalized_signal)
+                analysis = next((a for a in results['analyses'] if a.get('ticker') == buy_signal.get('ticker')), {})
+                buy_signal['fundamental_snapshot'] = fundamentals_fetcher.create_snapshot(
+                    buy_signal.get('ticker', ''),
+                    quarterly_data=analysis.get('quarterly_data', {}),
+                    use_fmp=args.use_fmp
+                )
+                buy_signals.append(buy_signal)
 
             buy_signals = sorted(buy_signals, key=lambda x: x['score'], reverse=True)
             logger.info(f"Found {len(buy_signals)} buy signals")
@@ -347,18 +348,8 @@ def main():
         sell_signals = []
         if signal_rec['should_generate_sells']:
             logger.info("Scoring sell signals...")
-            for analysis in results['analyses']:
-                if analysis['phase_info']['phase'] in [3, 4]:
-                    sell_signal = score_sell_signal(
-                        ticker=analysis['ticker'],
-                        price_data=analysis['price_data'],
-                        current_price=analysis['current_price'],
-                        phase_info=analysis['phase_info'],
-                        rs_series=analysis['rs_series']
-                    )
-
-                    if sell_signal['is_sell']:
-                        sell_signals.append(sell_signal)
+            for normalized_signal in strategy_payload.get('signals', {}).get('sell', []):
+                sell_signals.append(normalized_signal.get('raw', normalized_signal))
 
             sell_signals = sorted(sell_signals, key=lambda x: x['score'], reverse=True)
             logger.info(f"Found {len(sell_signals)} sell signals")

@@ -27,6 +27,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
+from src.strategies.registry import available_strategies, create_strategy
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -838,6 +840,13 @@ def main():
         default="data/quarterly_reports",
         help="Output directory for reports (default: data/quarterly_reports)",
     )
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        default="long_term",
+        choices=available_strategies(),
+        help="Strategy adapter to use",
+    )
     args = parser.parse_args()
 
     # Set logging level
@@ -847,6 +856,9 @@ def main():
         test_mode=args.test_mode,
         limit=args.limit,
     )
+
+    strategy = create_strategy(args.strategy)
+    logger.info(f"Using strategy adapter: {strategy.metadata().get('name', args.strategy)}")
 
     success = scanner.run()
     sys.exit(0 if success else 1)
