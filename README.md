@@ -17,6 +17,15 @@ AlphaIntelligence Capital is a **systematic hedge fund engine** — not a simple
 ## 🛠️ The Dual-System Architecture
 Our framework bridges two worlds: the **Daily Momentum Alpha** and the **Quarterly Compounder Strategy**.
 
+## 🌍 Market Universe Policy (Production vs Roadmap)
+
+- **Current production target: NSE (India).**
+  - The primary scanner, derivatives dashboard, and walk-forward examples are currently configured around NSE symbols and NSE benchmark/index context.
+- **US-market support:**
+  - US examples in legacy configs/docs should be treated as historical placeholders, **not** the active production universe.
+- **Multi-market support plan: YES (planned).**
+  - The roadmap includes explicit abstraction points for pluggable universe providers and market-specific indicator stacks (see `SYSTEM_OVERVIEW.md`).
+
 ### ⚡ System 1: Short-Term Alpha Generation (Daily)
 *   **Target**: 2-8 week holding periods.
 *   **Strategy**: Specific Entry Point Analysis (SEPA).
@@ -35,6 +44,7 @@ Our framework bridges two worlds: the **Daily Momentum Alpha** and the **Quarter
 1.  **`README.md`**: Fund overview and landing page.
 2.  **`SYSTEM_OVERVIEW.md`**: Technical architecture, module breakdown, and developer reference.
 3.  **`SIMPLE_TRADE_TRACKER.md`**: The essential Google Sheets template for tracking alpha generation.
+4.  **`CHANGELOG.md`**: Versioned record of material documentation and platform-direction clarifications.
 
 ---
 
@@ -67,6 +77,8 @@ EMAIL_RECIPIENT=recipient@email.com
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
 | **Backtesting + Email Workflow** | `python run_backtesting_workflow.py --symbols RELIANCE,HDFCBANK,TCS,INFY --send-email` |
 | **Walk-forward Experiment Runner** | `python run_walk_forward_experiments.py --symbol RELIANCE --years 5 --db-path experiments/metrics.db` |
+
+> **Command example consistency note:** examples above are NSE-first and represent the current production target.
 
 
 
