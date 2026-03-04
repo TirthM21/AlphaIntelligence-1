@@ -1,0 +1,9 @@
+symbol: RELIANCE
+years: 5
+train_window: 252
+test_window: 63
+step: 63
+parameter_grid:
+  buy_threshold: [0.995, 1.0, 1.01]
+  volume_threshold: [1.1, 1.2, 1.4]
+  minervini_strictness: [0.6, 0.8, 1.0]
