@@ -11,7 +11,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # Add project root to path
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
 from src.ai.ai_agent import AIAgent
