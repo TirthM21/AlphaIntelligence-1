@@ -65,6 +65,19 @@ EMAIL_PASSWORD=your_gmail_app_password
 EMAIL_RECIPIENT=recipient@email.com
 ```
 
+
+### 2.1 Database Configuration
+Set `DATABASE_URL` if you want to enable subscriber/position/performance persistence via SQLAlchemy.
+
+Supported engines in this project:
+- PostgreSQL (recommended for production): `postgresql://<user>:<password>@<host>:<port>/<database>`
+  - Legacy `postgres://...` URLs are auto-normalized to `postgresql://...` in code.
+- SQLite (useful for local/dev/testing):
+  - File DB: `sqlite:///path/to/local.db`
+  - In-memory DB (tests): `sqlite:///:memory:`
+
+General connection-string format: `<dialect>[+driver]://<username>:<password>@<host>:<port>/<database>` (SQLite is the exception and does not require host/user/password).
+
 ### 3. Execution
 | Goal | Command |
 | :--- | :--- |
