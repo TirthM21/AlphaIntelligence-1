@@ -90,8 +90,35 @@ General connection-string format: `<dialect>[+driver]://<username>:<password>@<h
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
 | **Backtesting + Email Workflow** | `python run_backtesting_workflow.py --symbols RELIANCE,HDFCBANK,TCS,INFY --send-email` |
 | **Walk-forward Experiment Runner** | `python run_walk_forward_experiments.py --symbol RELIANCE --years 5 --db-path experiments/metrics.db` |
+| **YAML Grid Experiment Runner** | `python run_experiments.py --config config/experiment_grid.yaml --output-dir data/experiments` |
 
 > **Command example consistency note:** examples above are NSE-first and represent the current production target.
+
+### YAML Grid Experiment Config
+
+`run_experiments.py` reads parameter grids from YAML, executes walk-forward windows, and writes config/metrics/artifact manifests under `data/experiments/<run_id>/`.
+
+Example config (`config/experiment_grid.yaml`):
+
+```yaml
+symbol: RELIANCE
+years: 5
+train_window: 252
+test_window: 63
+step: 63
+parameter_grid:
+  buy_threshold: [0.995, 1.0, 1.01]
+  volume_threshold: [1.1, 1.2, 1.4]
+  minervini_strictness: [0.6, 0.8, 1.0]
+```
+
+Run:
+
+```bash
+python run_experiments.py --config config/experiment_grid.yaml --output-dir data/experiments
+```
+
+The generated summary report ranks candidates using a composite score that blends return, drawdown quality, and stability (window-to-window consistency), rather than return alone.
 
 
 
