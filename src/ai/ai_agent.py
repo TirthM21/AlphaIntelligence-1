@@ -7,6 +7,7 @@ import re
 import time
 from typing import Dict, List, Optional
 
+from src.config.settings import AIAgentSettings
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -25,10 +26,11 @@ MODEL_KEY_ENV_MAP = {
 class AIAgent:
     """Uses LLM to generate professional financial commentary and newsletter content."""
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, settings: Optional[AIAgentSettings] = None, api_key: Optional[str] = None):
         load_dotenv()
+        active_settings = settings or AIAgentSettings()
 
-        self.base_url = os.getenv('NVIDIA_BASE_URL', 'https://integrate.api.nvidia.com/v1')
+        self.base_url = active_settings.base_url
 
         self.supported_models = [
             'qwen/qwen3.5-397b-a17b',
@@ -38,7 +40,7 @@ class AIAgent:
             'deepseek-ai/deepseek-v3.2',
             'moonshotai/kimi-k2.5',
         ]
-        self.model = os.getenv('NVIDIA_MODEL', self.supported_models[5])
+        self.model = active_settings.default_model
         if self.model not in self.supported_models:
             logger.warning('Requested model %s not in supported set, falling back to %s', self.model, self.supported_models[5])
             self.model = self.supported_models[5]
@@ -52,30 +54,11 @@ class AIAgent:
             or os.getenv(MODEL_KEY_ENV_MAP.get(self.model, ''))
         )
 
-        try:
-            self.request_timeout_seconds = float(os.getenv("NVIDIA_AI_TIMEOUT_SECONDS", "45"))
-        except (TypeError, ValueError):
-            self.request_timeout_seconds = 45.0
-
-        try:
-            self.max_retries = int(os.getenv("NVIDIA_AI_MAX_RETRIES", "1"))
-        except (TypeError, ValueError):
-            self.max_retries = 1
-
-        try:
-            self.max_tokens = int(os.getenv("NVIDIA_AI_MAX_TOKENS", "4096"))
-        except (TypeError, ValueError):
-            self.max_tokens = 4096
-
-        try:
-            self.failure_threshold = max(1, int(os.getenv("NVIDIA_AI_FAILURE_THRESHOLD", "2")))
-        except (TypeError, ValueError):
-            self.failure_threshold = 2
-
-        try:
-            self.cooldown_seconds = max(0, int(os.getenv("NVIDIA_AI_COOLDOWN_SECONDS", "900")))
-        except (TypeError, ValueError):
-            self.cooldown_seconds = 900
+        self.request_timeout_seconds = active_settings.request_timeout_seconds
+        self.max_retries = active_settings.max_retries
+        self.max_tokens = active_settings.max_tokens
+        self.failure_threshold = active_settings.failure_threshold
+        self.cooldown_seconds = active_settings.cooldown_seconds
 
         self._consecutive_failures = 0
         self._cooldown_until = 0.0

@@ -20,6 +20,7 @@ from ..data.enhanced_fundamentals import EnhancedFundamentalsFetcher
 from ..data.price_service import PriceService
 from ..data.provider_health import provider_health
 from ..ai.ai_agent import AIAgent
+from src.config.settings import AIAgentSettings
 from .visualizer import ChartArtifact, MarketVisualizer
 
 
@@ -76,13 +77,18 @@ class NewsletterGenerator:
     }
     SUPPORTED_PROVIDERS = {"yfinance"}
 
-    def __init__(self, portfolio_path: str = "./data/positions.json", config_path: str = "config.yaml"):
+    def __init__(
+        self,
+        portfolio_path: str = "./data/positions.json",
+        config_path: str = "config.yaml",
+        ai_settings: Optional[AIAgentSettings] = None,
+    ):
         try:
             self.fetcher = EnhancedFundamentalsFetcher()
         except Exception as e:
             logger.warning(f"EnhancedFundamentalsFetcher unavailable during init: {e}")
             self.fetcher = None
-        self.ai_agent = AIAgent()
+        self.ai_agent = AIAgent(settings=ai_settings)
         self.visualizer = MarketVisualizer(output_dir="./data/charts")
         self.price_service = PriceService()
         self.portfolio_path = Path(portfolio_path)

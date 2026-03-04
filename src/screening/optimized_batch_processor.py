@@ -19,6 +19,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 import yfinance as yf
 
+from src.config.settings import FetcherSettings, OptimizedBatchProcessorSettings
 from src.data.fetcher import YahooFinanceFetcher
 from src.data.fundamentals_fetcher import analyze_fundamentals_for_signal
 from src.data.enhanced_fundamentals import EnhancedFundamentalsFetcher
@@ -34,12 +35,14 @@ class OptimizedBatchProcessor:
 
     def __init__(
         self,
-        cache_dir: str = "./data/cache",
-        results_dir: str = "./data/batch_results",
-        max_workers: int = 5,  # Increased to 5 workers
-        rate_limit_delay: float = 0.2,  # Reduced to 0.2 sec = 5 TPS per worker
-        batch_size: int = 100,
-        use_git_storage: bool = False
+        settings: Optional[OptimizedBatchProcessorSettings] = None,
+        fetcher_settings: Optional[FetcherSettings] = None,
+        cache_dir: Optional[str] = None,
+        results_dir: Optional[str] = None,
+        max_workers: Optional[int] = None,
+        rate_limit_delay: Optional[float] = None,
+        batch_size: Optional[int] = None,
+        use_git_storage: bool = False,
     ):
         """Initialize optimized processor.
 
@@ -51,19 +54,28 @@ class OptimizedBatchProcessor:
             batch_size: Save progress frequency
             use_git_storage: Use Git-based storage for fundamentals (recommended)
         """
-        self.fetcher = YahooFinanceFetcher(cache_dir=cache_dir)
+        active_settings = settings or OptimizedBatchProcessorSettings()
+        self.fetcher = YahooFinanceFetcher(
+            settings=fetcher_settings,
+            cache_dir=cache_dir,
+        )
         self.enhanced_fetcher = EnhancedFundamentalsFetcher()
         self.git_fetcher = GitStorageFetcher() if use_git_storage else None
         self.use_git_storage = use_git_storage
-        self.results_dir = Path(results_dir)
+        self.results_dir = Path(results_dir or active_settings.results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
-        self.max_workers = max_workers
-        self.rate_limit_delay = rate_limit_delay
-        self.batch_size = batch_size
+        self.max_workers = max_workers if max_workers is not None else active_settings.max_workers
+        self.rate_limit_delay = rate_limit_delay if rate_limit_delay is not None else active_settings.rate_limit_delay
+        self.batch_size = batch_size if batch_size is not None else active_settings.batch_size
+        self.prefetch_batch_size = active_settings.prefetch_batch_size
+        self.prefetch_pause_seconds = active_settings.prefetch_pause_seconds
+        self.rate_limit_cooldown_seconds = active_settings.rate_limit_cooldown_seconds
+        self.rate_limit_error_threshold = active_settings.rate_limit_error_threshold
+        self.max_backoff_delay = active_settings.max_backoff_delay
 
         # Effective TPS = max_workers / rate_limit_delay
-        effective_tps = max_workers / rate_limit_delay
+        effective_tps = self.max_workers / self.rate_limit_delay
 
         self.benchmark_data = None
         self.benchmark_price = None
@@ -92,7 +104,7 @@ class OptimizedBatchProcessor:
         self.filter_reasons = {}  # {reason: count}
 
         logger.info(f"OptimizedBatchProcessor initialized")
-        logger.info(f"Workers: {max_workers}, Delay: {rate_limit_delay}s")
+        logger.info(f"Workers: {self.max_workers}, Delay: {self.rate_limit_delay}s")
         logger.info(f"Effective rate: ~{effective_tps:.1f} TPS")
 
     def load_progress(self) -> Optional[Dict]:
@@ -321,12 +333,12 @@ class OptimizedBatchProcessor:
                 logger.warning(f"Rate limit hit on {ticker}: {e}")
 
                 # Adaptive backoff - increase delay
-                self.backoff_delay = min(self.backoff_delay + 0.5, 5.0)  # Max 5 sec extra
+                self.backoff_delay = min(self.backoff_delay + 0.5, self.max_backoff_delay)
                 logger.warning(f"Increasing backoff delay to +{self.backoff_delay:.1f}s")
 
                 # If we hit multiple rate limits, sleep longer immediately
-                if self.consecutive_errors >= 3:
-                    sleep_time = 30
+                if self.consecutive_errors >= self.rate_limit_error_threshold:
+                    sleep_time = self.rate_limit_cooldown_seconds
                     logger.warning(f"Multiple rate limits detected! Sleeping {sleep_time}s...")
                     time.sleep(sleep_time)
                     self.consecutive_errors = 0
@@ -532,19 +544,20 @@ class OptimizedBatchProcessor:
 
         logger.info("✅ Fundamental prefetch complete.")
 
-    def pre_fetch_prices(self, tickers: List[str], batch_size: int = 500):
+    def pre_fetch_prices(self, tickers: List[str], batch_size: Optional[int] = None):
         """Pre-fetch price data for a list of tickers in large batches.
         
         This populates the disk cache before the parallel analysis starts,
         drastically reducing individual API calls.
         """
-        logger.info(f"🚀 Pre-fetching prices for {len(tickers)} tickers in batches of {batch_size}...")
+        effective_batch_size = batch_size or self.prefetch_batch_size
+        logger.info(f"🚀 Pre-fetching prices for {len(tickers)} tickers in batches of {effective_batch_size}...")
         
         # We only need to pre-fetch if we are NOT using only Git storage 
         # (though even with Git storage, 5y history is needed for drawdown)
-        for i in range(0, len(tickers), batch_size):
-            chunk = tickers[i:i + batch_size]
-            logger.info(f"  Pre-fetch chunk {i//batch_size + 1}/{(len(tickers)-1)//batch_size + 1}")
+        for i in range(0, len(tickers), effective_batch_size):
+            chunk = tickers[i:i + effective_batch_size]
+            logger.info(f"  Pre-fetch chunk {i//effective_batch_size + 1}/{(len(tickers)-1)//effective_batch_size + 1}")
             try:
                 # This will populate the disk cache
                 self.fetcher.fetch_batch_prices(chunk, period='5y')
@@ -552,7 +565,7 @@ class OptimizedBatchProcessor:
                 logger.warning(f"  Failed pre-fetch chunk: {e}")
             
             # Small delay between large batches
-            if i + batch_size < len(tickers):
-                time.sleep(2)
+            if i + effective_batch_size < len(tickers):
+                time.sleep(self.prefetch_pause_seconds)
         
         logger.info("✅ Pre-fetching complete. Parallel analysis will now use disk cache.")
