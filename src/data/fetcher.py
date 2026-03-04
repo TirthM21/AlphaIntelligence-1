@@ -5,12 +5,13 @@ price history with caching, error handling, and retry logic.
 """
 
 import logging
-import os
 import pickle
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+from src.config.settings import FetcherSettings
 
 import pandas as pd
 import yfinance as yf
@@ -40,10 +41,11 @@ class YahooFinanceFetcher:
 
     def __init__(
         self,
-        cache_dir: str = "./data/cache",
-        cache_expiry_hours: int = 24,
-        max_retries: int = 3,
-        retry_delay: int = 2
+        settings: Optional[FetcherSettings] = None,
+        cache_dir: Optional[str] = None,
+        cache_expiry_hours: Optional[int] = None,
+        max_retries: Optional[int] = None,
+        retry_delay: Optional[int] = None,
     ) -> None:
         """Initialize the YahooFinanceFetcher.
 
@@ -53,12 +55,15 @@ class YahooFinanceFetcher:
             max_retries: Maximum retry attempts for failed API calls.
             retry_delay: Seconds to wait between retries.
         """
-        self.cache_dir = Path(cache_dir)
+        active_settings = settings or FetcherSettings()
+        active_cache_dir = cache_dir or active_settings.cache_dir
+
+        self.cache_dir = Path(active_cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_expiry_hours = cache_expiry_hours
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-        logger.info(f"YahooFinanceFetcher initialized with cache_dir: {cache_dir}")
+        self.cache_expiry_hours = cache_expiry_hours if cache_expiry_hours is not None else active_settings.cache_expiry_hours
+        self.max_retries = max_retries if max_retries is not None else active_settings.max_retries
+        self.retry_delay = retry_delay if retry_delay is not None else active_settings.retry_delay_seconds
+        logger.info(f"YahooFinanceFetcher initialized with cache_dir: {active_cache_dir}")
 
     def is_price_cached(self, ticker: str, period: str = "5y", interval: str = "1d") -> bool:
         """Check if price data for a ticker is cached and valid.
@@ -237,6 +242,8 @@ class YahooFinanceFetcher:
         # Start with fast_info because it's cheaper than a full .info refresh.
         try:
             fast_info = stock.fast_info
+            if not isinstance(fast_info, dict):
+                fast_info = {}
         except Exception as e:
             logger.debug(f"{ticker}: fast_info unavailable: {e}")
             fast_info = {}

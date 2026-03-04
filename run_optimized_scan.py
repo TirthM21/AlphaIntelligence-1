@@ -31,6 +31,7 @@ from collections import Counter
 if sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+from src.config.settings import SettingsValidationError, load_settings
 from src.data.universe_fetcher import StockUniverseFetcher
 from src.screening.optimized_batch_processor import OptimizedBatchProcessor
 from src.screening.benchmark import (
@@ -385,6 +386,12 @@ def main():
     args = parser.parse_args()
     configure_logging(level=args.log_level, json_logs=args.json_logs)
 
+    try:
+        app_settings = load_settings("config.yaml")
+    except SettingsValidationError as exc:
+        logger.error("Configuration validation failed: %s", exc)
+        sys.exit(2)
+
     # By default, prefetch storage when git-storage mode is used
     args.prefetch_storage = (args.prefetch_storage or args.git_storage) and not args.no_prefetch_storage
 
@@ -449,9 +456,11 @@ def main():
 
         # Initialize processor
         processor = OptimizedBatchProcessor(
+            settings=app_settings.optimized_batch_processor,
+            fetcher_settings=app_settings.fetcher,
             max_workers=args.workers,
             rate_limit_delay=args.delay,
-            use_git_storage=args.git_storage
+            use_git_storage=args.git_storage,
         )
 
         if args.git_storage:
@@ -598,7 +607,7 @@ def main():
         # Generate Newsletter
         try:
             logger.info("Generating daily newsletter...")
-            newsletter_gen = NewsletterGenerator()
+            newsletter_gen = NewsletterGenerator(ai_settings=app_settings.ai_agent)
             
             # Prepare status dict
             market_status = {
