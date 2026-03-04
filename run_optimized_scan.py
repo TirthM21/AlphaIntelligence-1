@@ -49,6 +49,7 @@ from src.reporting.portfolio_manager import PortfolioManager
 from src.reporting.performance_tracker import PerformanceTracker
 from src.notifications.email_notifier import EmailNotifier
 from src.database.db_manager import DBManager
+from src.risk.portfolio_risk_engine import PortfolioRiskEngine
 from src.utils.logging_config import configure_logging
 
 
@@ -546,6 +547,18 @@ def main():
                     buy_signals.append(adjusted_signal)
 
         buy_signals = sorted(buy_signals, key=lambda x: x['score'], reverse=True)
+
+        # Portfolio-level risk controls (run before downstream reporting/newsletter)
+        risk_engine = PortfolioRiskEngine()
+        analysis_by_ticker = {item.get('ticker'): item for item in results.get('analyses', [])}
+        buy_signals, risk_decisions = risk_engine.apply(
+            candidate_signals=buy_signals,
+            analysis_by_ticker=analysis_by_ticker,
+            max_positions=15,
+        )
+        risk_decisions_path = risk_engine.persist_decisions(risk_decisions)
+        if risk_decisions_path:
+            logger.info(f"Risk decision log persisted: {risk_decisions_path}")
 
         # Sell signals
         sell_signals = []
