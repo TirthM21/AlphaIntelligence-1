@@ -7,7 +7,17 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, Integer, String, create_engine
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -62,6 +72,44 @@ class Position(Base):
     )  # SELL_SIGNAL, STOP_LOSS, SMA_VIOLATION, MANUAL
     benchmark_entry_price = Column(Float, nullable=True)
     benchmark_exit_price = Column(Float, nullable=True)
+    entry_order_id = Column(Integer, ForeignKey("simulated_orders.id"), nullable=True)
+    exit_order_id = Column(Integer, ForeignKey("simulated_orders.id"), nullable=True)
+
+
+class SimulatedOrder(Base):
+    """Simulated order linked to a position lifecycle."""
+
+    __tablename__ = "simulated_orders"
+
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String(20), nullable=False)
+    strategy = Column(String(20), default="DAILY")
+    side = Column(String(10), nullable=False)  # BUY / SELL
+    order_type = Column(String(10), nullable=False)  # MARKET / LIMIT / STOP
+    status = Column(String(10), nullable=False, default="NEW")
+    quantity = Column(Float, nullable=False, default=1.0)
+    filled_quantity = Column(Float, nullable=False, default=0.0)
+    signal_price = Column(Float, nullable=False)
+    limit_price = Column(Float, nullable=True)
+    stop_price = Column(Float, nullable=True)
+    avg_fill_price = Column(Float, nullable=True)
+    slippage_bps = Column(Float, nullable=True)
+    fill_ratio = Column(Float, nullable=True)
+    time_to_fill_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SimulatedFill(Base):
+    """Individual fill records for simulated orders."""
+
+    __tablename__ = "simulated_fills"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("simulated_orders.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    fill_price = Column(Float, nullable=False)
+    latency_ms = Column(Integer, nullable=True)
+    filled_at = Column(DateTime, default=datetime.utcnow)
 
 
 class FundPerformance(Base):
@@ -84,6 +132,9 @@ class FundPerformance(Base):
     alpha_vs_benchmark = Column(Float, default=0.0)
     benchmark_return = Column(Float, default=0.0)
     strategy = Column(String(20), default="DAILY")
+    avg_slippage_bps = Column(Float, nullable=True)
+    avg_fill_ratio = Column(Float, nullable=True)
+    avg_time_to_fill_ms = Column(Float, nullable=True)
 
 
 class DBManager:
@@ -243,6 +294,7 @@ class DBManager:
         signal_score: float = None,
         strategy: str = "DAILY",
         benchmark_price: float = None,
+        entry_order_id: int = None,
     ) -> bool:
         """Open a new position. Skips if already open for this ticker+strategy."""
         if not self.db_url:
@@ -269,6 +321,7 @@ class DBManager:
                     signal_score=self._to_native_float(signal_score),
                     strategy=strategy,
                     benchmark_entry_price=self._to_native_float(benchmark_price),
+                    entry_order_id=entry_order_id,
                 )
                 session.add(pos)
                 session.commit()
@@ -286,6 +339,7 @@ class DBManager:
         exit_reason: str = "SELL_SIGNAL",
         strategy: str = "DAILY",
         benchmark_price: float = None,
+        exit_order_id: int = None,
     ) -> Optional[Dict]:
         """Close an open position. Returns the closed position data or None."""
         if not self.db_url:
@@ -306,6 +360,7 @@ class DBManager:
                 pos.status = "CLOSED"
                 pos.exit_reason = exit_reason
                 pos.benchmark_exit_price = self._to_native_float(benchmark_price)
+                pos.exit_order_id = exit_order_id
                 if normalized_exit_price is not None and pos.entry_price:
                     pos.pnl_pct = (
                         (normalized_exit_price - pos.entry_price) / pos.entry_price
@@ -354,6 +409,7 @@ class DBManager:
                         "signal_score": p.signal_score,
                         "strategy": p.strategy,
                         "benchmark_entry_price": p.benchmark_entry_price,
+                        "entry_order_id": p.entry_order_id,
                     }
                     for p in positions
                 ]
@@ -389,12 +445,152 @@ class DBManager:
                         ),
                         "benchmark_entry_price": p.benchmark_entry_price,
                         "benchmark_exit_price": p.benchmark_exit_price,
+                        "entry_order_id": p.entry_order_id,
+                        "exit_order_id": p.exit_order_id,
                     }
                     for p in positions
                 ]
             except Exception as e:
                 logger.error(f"Failed to fetch closed positions: {e}")
                 return []
+
+    def record_simulated_order(self, order_data: Dict, fills: List[Dict]) -> Optional[int]:
+        """Persist a simulated order and its fill events."""
+        if not self.db_url:
+            return None
+
+        with self.Session() as session:
+            try:
+                order = SimulatedOrder(
+                    ticker=order_data["ticker"],
+                    strategy=order_data.get("strategy", "DAILY"),
+                    side=order_data["side"],
+                    order_type=order_data["order_type"],
+                    status=order_data.get("status", "NEW"),
+                    quantity=self._to_native_float(order_data.get("quantity", 1.0)) or 1.0,
+                    filled_quantity=self._to_native_float(order_data.get("filled_quantity", 0.0)) or 0.0,
+                    signal_price=self._to_native_float(order_data.get("signal_price")) or 0.0,
+                    limit_price=self._to_native_float(order_data.get("limit_price")),
+                    stop_price=self._to_native_float(order_data.get("stop_price")),
+                    avg_fill_price=self._to_native_float(order_data.get("avg_fill_price")),
+                    slippage_bps=self._to_native_float(order_data.get("slippage_bps")),
+                    fill_ratio=self._to_native_float(order_data.get("fill_ratio")),
+                    time_to_fill_ms=order_data.get("time_to_fill_ms"),
+                    created_at=order_data.get("created_at", datetime.utcnow()),
+                )
+                session.add(order)
+                session.flush()
+
+                for fill in fills:
+                    session.add(
+                        SimulatedFill(
+                            order_id=order.id,
+                            quantity=self._to_native_float(fill.get("quantity")) or 0.0,
+                            fill_price=self._to_native_float(fill.get("fill_price")) or 0.0,
+                            latency_ms=fill.get("latency_ms"),
+                            filled_at=fill.get("filled_at", datetime.utcnow()),
+                        )
+                    )
+
+                session.commit()
+                return order.id
+            except Exception as e:
+                logger.error(f"Failed to record simulated order: {e}")
+                session.rollback()
+                return None
+
+    def reconcile_positions_from_fills(self, strategy: str = "DAILY") -> int:
+        """Recompute position pricing and PnL using simulated fills."""
+        if not self.db_url:
+            return 0
+
+        with self.Session() as session:
+            try:
+                positions = session.query(Position).filter_by(strategy=strategy).all()
+                updated = 0
+
+                for pos in positions:
+                    changed = False
+
+                    if pos.entry_order_id:
+                        entry_order = session.get(SimulatedOrder, pos.entry_order_id)
+                        if entry_order and entry_order.avg_fill_price:
+                            entry_fill = self._to_native_float(entry_order.avg_fill_price)
+                            if entry_fill and pos.entry_price != entry_fill:
+                                pos.entry_price = entry_fill
+                                changed = True
+
+                    if pos.exit_order_id:
+                        exit_order = session.get(SimulatedOrder, pos.exit_order_id)
+                        if exit_order and exit_order.avg_fill_price:
+                            exit_fill = self._to_native_float(exit_order.avg_fill_price)
+                            if exit_fill and pos.exit_price != exit_fill:
+                                pos.exit_price = exit_fill
+                                changed = True
+
+                    if pos.exit_price and pos.entry_price and pos.entry_price > 0:
+                        pnl_pct = ((pos.exit_price - pos.entry_price) / pos.entry_price) * 100
+                        pnl_pct = self._to_native_float(pnl_pct)
+                        if pnl_pct != pos.pnl_pct:
+                            pos.pnl_pct = pnl_pct
+                            changed = True
+
+                    if changed:
+                        updated += 1
+
+                session.commit()
+                return updated
+            except Exception as e:
+                logger.error(f"Failed position reconciliation: {e}")
+                session.rollback()
+                return 0
+
+    def get_execution_quality_metrics(
+        self, strategy: str = "DAILY", limit: int = 500
+    ) -> Dict[str, Optional[float]]:
+        """Aggregate execution-quality metrics from simulated orders."""
+        if not self.db_url:
+            return {
+                "avg_slippage_bps": None,
+                "avg_fill_ratio": None,
+                "avg_time_to_fill_ms": None,
+            }
+
+        with self.Session() as session:
+            try:
+                orders = (
+                    session.query(SimulatedOrder)
+                    .filter_by(strategy=strategy)
+                    .order_by(SimulatedOrder.created_at.desc())
+                    .limit(limit)
+                    .all()
+                )
+                if not orders:
+                    return {
+                        "avg_slippage_bps": None,
+                        "avg_fill_ratio": None,
+                        "avg_time_to_fill_ms": None,
+                    }
+
+                slippages = [o.slippage_bps for o in orders if o.slippage_bps is not None]
+                fill_ratios = [o.fill_ratio for o in orders if o.fill_ratio is not None]
+                ttfs = [o.time_to_fill_ms for o in orders if o.time_to_fill_ms is not None]
+
+                def _avg(values):
+                    return sum(values) / len(values) if values else None
+
+                return {
+                    "avg_slippage_bps": _avg(slippages),
+                    "avg_fill_ratio": _avg(fill_ratios),
+                    "avg_time_to_fill_ms": _avg(ttfs),
+                }
+            except Exception as e:
+                logger.error(f"Failed to compute execution metrics: {e}")
+                return {
+                    "avg_slippage_bps": None,
+                    "avg_fill_ratio": None,
+                    "avg_time_to_fill_ms": None,
+                }
 
     def record_daily_performance(self, perf_data: Dict) -> bool:
         """Record a daily fund performance snapshot."""

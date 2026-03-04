@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 from ..database.db_manager import DBManager
 from ..data.price_service import PriceService
+from ..execution import PaperBroker
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class PerformanceTracker:
         self.db = DBManager()
         self._benchmark_price = None
         self.price_service = PriceService()
+        self.paper_broker = PaperBroker()
 
     @property
     def benchmark_price(self) -> float:
@@ -105,12 +107,23 @@ class PerformanceTracker:
         for ticker in sell_tickers:
             current_price = latest_prices.get(ticker, 0)
             if current_price > 0:
+                sell_order = self.paper_broker.submit_order(
+                    ticker=ticker,
+                    side='SELL',
+                    quantity=1.0,
+                    order_type='MARKET',
+                    signal_price=current_price,
+                    market_price=current_price,
+                )
+                exit_order_id = self._store_simulated_order(sell_order)
+                fill_price = sell_order.average_fill_price or current_price
                 result = self.db.close_position(
                     ticker=ticker,
-                    exit_price=current_price,
+                    exit_price=fill_price,
                     exit_reason='SELL_SIGNAL',
                     strategy=self.strategy,
-                    benchmark_price=self.benchmark_price
+                    benchmark_price=self.benchmark_price,
+                    exit_order_id=exit_order_id,
                 )
                 if result:
                     closed += 1
@@ -123,13 +136,24 @@ class PerformanceTracker:
             score = signal.get('score', 0)
 
             if current_price > 0:
+                buy_order = self.paper_broker.submit_order(
+                    ticker=ticker,
+                    side='BUY',
+                    quantity=1.0,
+                    order_type='MARKET',
+                    signal_price=current_price,
+                    market_price=current_price,
+                )
+                entry_order_id = self._store_simulated_order(buy_order)
+                fill_price = buy_order.average_fill_price or current_price
                 success = self.db.open_position(
                     ticker=ticker,
-                    entry_price=current_price,
+                    entry_price=fill_price,
                     stop_loss=stop_loss,
                     signal_score=score,
                     strategy=self.strategy,
-                    benchmark_price=self.benchmark_price
+                    benchmark_price=self.benchmark_price,
+                    entry_order_id=entry_order_id,
                 )
                 if success:
                     opened += 1
@@ -164,16 +188,28 @@ class PerformanceTracker:
 
             # Check stop loss
             if stop_loss and current_price <= stop_loss:
+                sell_order = self.paper_broker.submit_order(
+                    ticker=ticker,
+                    side='SELL',
+                    quantity=1.0,
+                    order_type='STOP',
+                    signal_price=current_price,
+                    market_price=current_price,
+                    stop_price=stop_loss,
+                )
+                exit_order_id = self._store_simulated_order(sell_order)
+                fill_price = sell_order.average_fill_price or current_price
                 result = self.db.close_position(
                     ticker=ticker,
-                    exit_price=current_price,
+                    exit_price=fill_price,
                     exit_reason='STOP_LOSS',
                     strategy=self.strategy,
-                    benchmark_price=self.benchmark_price
+                    benchmark_price=self.benchmark_price,
+                    exit_order_id=exit_order_id,
                 )
                 if result:
                     closed.append(result)
-                    logger.warning(f"🛑 Stop loss hit: {ticker} @ {current_price:.2f} (stop: {stop_loss:.2f})")
+                    logger.warning(f"🛑 Stop loss hit: {ticker} @ {fill_price:.2f} (stop: {stop_loss:.2f})")
 
         if closed:
             logger.info(f"🛑 {len(closed)} position(s) closed via stop loss")
@@ -185,6 +221,7 @@ class PerformanceTracker:
         Returns:
             Dict with all fund metrics
         """
+        self.reconcile_daily_positions()
         open_positions = self.db.get_open_positions(strategy=self.strategy)
         closed_positions = self.db.get_closed_positions(strategy=self.strategy, limit=500)
 
@@ -245,6 +282,8 @@ class PerformanceTracker:
         # Nifty 50 return (over same period as our trades)
         benchmark_return = self._compute_benchmark_return(closed_positions)
 
+        execution_metrics = self.db.get_execution_quality_metrics(strategy=self.strategy, limit=500)
+
         metrics = {
             'strategy': self.strategy,
             'total_pnl_pct': round(total_realized_pnl + total_unrealized_pnl, 2),
@@ -262,7 +301,22 @@ class PerformanceTracker:
             'alpha_vs_benchmark': round(alpha, 2),
             'benchmark_return': round(benchmark_return, 2),
             'open_position_details': unrealized_pnl,
-            'total_trades': len(realized_pnl)
+            'total_trades': len(realized_pnl),
+            'avg_slippage_bps': (
+                round(execution_metrics['avg_slippage_bps'], 2)
+                if execution_metrics.get('avg_slippage_bps') is not None
+                else None
+            ),
+            'avg_fill_ratio': (
+                round(execution_metrics['avg_fill_ratio'], 4)
+                if execution_metrics.get('avg_fill_ratio') is not None
+                else None
+            ),
+            'avg_time_to_fill_ms': (
+                round(execution_metrics['avg_time_to_fill_ms'], 1)
+                if execution_metrics.get('avg_time_to_fill_ms') is not None
+                else None
+            ),
         }
 
         # Record to database
@@ -302,6 +356,12 @@ class PerformanceTracker:
             lines.append(f"| **Best Trade** | {metrics['best_trade']} |")
         if metrics.get('worst_trade'):
             lines.append(f"| **Worst Trade** | {metrics['worst_trade']} |")
+        if metrics.get('avg_slippage_bps') is not None:
+            lines.append(f"| **Avg Slippage** | {metrics['avg_slippage_bps']:+.2f} bps |")
+        if metrics.get('avg_fill_ratio') is not None:
+            lines.append(f"| **Avg Fill Ratio** | {metrics['avg_fill_ratio'] * 100:.1f}% |")
+        if metrics.get('avg_time_to_fill_ms') is not None:
+            lines.append(f"| **Avg Time to Fill** | {metrics['avg_time_to_fill_ms']:.1f} ms |")
         lines.append("")
 
         # Open positions table
@@ -335,6 +395,43 @@ class PerformanceTracker:
             lines.append("")
 
         return "\n".join(lines)
+
+    def reconcile_daily_positions(self) -> int:
+        """Run daily reconciliation to update P&L from simulated fills."""
+        updated = self.db.reconcile_positions_from_fills(strategy=self.strategy)
+        if updated:
+            logger.info("🔁 Reconciled %s position(s) from simulated fills (%s)", updated, self.strategy)
+        return updated
+
+    def _store_simulated_order(self, order) -> Optional[int]:
+        """Persist a simulated order and return DB id."""
+        order_data = {
+            'ticker': order.ticker,
+            'strategy': self.strategy,
+            'side': order.side.value,
+            'order_type': order.order_type.value,
+            'status': order.status.value,
+            'quantity': order.quantity,
+            'filled_quantity': order.filled_quantity,
+            'signal_price': order.signal_price,
+            'limit_price': order.limit_price,
+            'stop_price': order.stop_price,
+            'avg_fill_price': order.average_fill_price,
+            'slippage_bps': order.slippage_bps,
+            'fill_ratio': order.fill_ratio,
+            'time_to_fill_ms': order.time_to_fill_ms,
+            'created_at': order.submitted_at,
+        }
+        fills = [
+            {
+                'quantity': fill.quantity,
+                'fill_price': fill.price,
+                'latency_ms': fill.latency_ms,
+                'filled_at': fill.timestamp,
+            }
+            for fill in order.fills
+        ]
+        return self.db.record_simulated_order(order_data, fills)
 
     # ==================== PRIVATE HELPERS ====================
 
