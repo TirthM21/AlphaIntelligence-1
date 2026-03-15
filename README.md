@@ -105,6 +105,18 @@ The in-repo API service (`src/api/service.py`) includes additional event + strat
 
 These contracts are covered in `tests/test_api_service.py`.
 
+### Competition Daily Condensed Signals
+
+A dedicated workflow builds a daily BUY/SELL consensus list for competition mode by combining the existing strategy adapters:
+
+- Workflow: `.github/workflows/daily_competition_signals.yml`
+- Script: `python scripts/competition/generate_daily_competition_list.py --limit 180 --top-n 15`
+- Outputs:
+  - `data/competition_signals/latest_competition_signals.md`
+  - `data/competition_signals/latest_competition_signals.json`
+
+The JSON output includes method-catalog metadata and a research-model registry (implemented/partial/planned) so you can track what is already active versus queued for future integration.
+
 ### YAML Grid Experiment Config
 
 `run_experiments.py` reads parameter grids from YAML, executes walk-forward windows, and writes config/metrics/artifact manifests under `data/experiments/<run_id>/`.
