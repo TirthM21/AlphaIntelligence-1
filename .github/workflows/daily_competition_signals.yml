@@ -8,7 +8,7 @@ on:
       limit:
         description: 'Universe limit for each strategy run'
         required: false
-        default: '180'
+        default: 'all'
       top_n:
         description: 'Top BUY/SELL ideas in condensed list'
         required: false
@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir -p data/competition_signals
           python scripts/competition/generate_daily_competition_list.py \
-            --limit "${{ github.event.inputs.limit || '180' }}" \
+            --limit "${{ github.event.inputs.limit || 'all' }}" \
             --top-n "${{ github.event.inputs.top_n || '15' }}"
 
       - name: Show latest condensed list preview

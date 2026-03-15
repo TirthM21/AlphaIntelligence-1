@@ -30,7 +30,33 @@ class SignalRow:
     side: str
 
 
-def run_scan(strategy: str, limit: int, root_dir: Path, out_dir: Path) -> Path:
+def parse_int_arg(value: str | int | None, *, arg_name: str, minimum: int = 1, allow_none: bool = False) -> int | None:
+    if value is None:
+        if allow_none:
+            return None
+        raise argparse.ArgumentTypeError(f"{arg_name} is required")
+
+    if isinstance(value, int):
+        parsed = value
+    else:
+        normalized = value.strip().replace(",", "").replace("_", "")
+        if allow_none and normalized.lower() in {"", "none", "null", "all"}:
+            return None
+        if not normalized:
+            raise argparse.ArgumentTypeError(f"{arg_name} must be an integer")
+        try:
+            parsed = int(normalized)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                f"{arg_name} must be an integer (commas are allowed, e.g. 10,000)"
+            ) from exc
+
+    if parsed < minimum:
+        raise argparse.ArgumentTypeError(f"{arg_name} must be >= {minimum}")
+    return parsed
+
+
+def run_scan(strategy: str, limit: int | None, root_dir: Path, out_dir: Path) -> Path:
     cmd = [
         "python",
         "run_optimized_scan.py",
@@ -42,9 +68,9 @@ def run_scan(strategy: str, limit: int, root_dir: Path, out_dir: Path) -> Path:
         "exchange",
         "--strategy",
         strategy,
-        "--limit",
-        str(limit),
     ]
+    if limit is not None:
+        cmd.extend(["--limit", str(limit)])
     subprocess.run(cmd, cwd=root_dir, check=True)
 
     latest_report = root_dir / "data" / "daily_scans" / "latest_optimized_scan.txt"
@@ -140,8 +166,18 @@ def render_markdown(payload: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate daily condensed buy/sell list for Crowwd competition")
-    parser.add_argument("--limit", type=int, default=180, help="Universe limit for each strategy scan")
-    parser.add_argument("--top-n", type=int, default=15, help="Top ideas to keep on each side")
+    parser.add_argument(
+        "--limit",
+        type=lambda v: parse_int_arg(v, arg_name="--limit", allow_none=True),
+        default=None,
+        help="Universe limit for each strategy scan; use 'all' or omit for full universe",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=lambda v: parse_int_arg(v, arg_name="--top-n"),
+        default=15,
+        help="Top ideas to keep on each side",
+    )
     parser.add_argument("--skip-scan", action="store_true", help="Skip fresh scans and parse existing copied reports")
     args = parser.parse_args()
 
