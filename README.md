@@ -88,6 +88,7 @@ General connection-string format: `<dialect>[+driver]://<username>:<password>@<h
 | **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --workers 8 --send-email` |
 | **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
+| **Crowwd Closing Bell Dashboard** | `./run_closing_bell_dashboard.sh` (uses `dashboard/closing_bell_dashboard.py`) |
 | **Backtesting + Email Workflow** | `python run_backtesting_workflow.py --symbols RELIANCE,HDFCBANK,TCS,INFY --send-email` |
 | **Walk-forward Experiment Runner** | `python run_walk_forward_experiments.py --symbol RELIANCE --years 5 --db-path experiments/metrics.db` |
 | **YAML Grid Experiment Runner** | `python run_experiments.py --config config/experiment_grid.yaml --output-dir data/experiments` |
