@@ -117,6 +117,11 @@ A dedicated workflow builds a daily BUY/SELL consensus list for competition mode
 
 The JSON output includes method-catalog metadata and a research-model registry (implemented/partial/planned) so you can track what is already active versus queued for future integration.
 
+- Regime workflow: `.github/workflows/daily_regime_method_consensus.yml`
+- Regime script: `python scripts/competition/generate_regime_method_consensus.py --top-n 12`
+
+This regime workflow uses a 65-method library (`src/strategies/competition_method_framework.py`) with explicit statuses (`implemented`, `partial`, `planned`) and produces daily regime-aware BUY/SELL consensus outputs.
+
 ### YAML Grid Experiment Config
 
 `run_experiments.py` reads parameter grids from YAML, executes walk-forward windows, and writes config/metrics/artifact manifests under `data/experiments/<run_id>/`.
