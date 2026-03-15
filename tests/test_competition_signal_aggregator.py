@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts.competition.generate_daily_competition_list import aggregate, parse_report
+from scripts.competition.generate_daily_competition_list import aggregate, parse_int_arg, parse_report
 
 
 def test_parse_report_extracts_buy_and_sell_rows(tmp_path: Path):
@@ -42,3 +42,16 @@ def test_aggregate_builds_consensus_and_confidence():
     assert condensed["buys"][0]["confidence_pct"] == 100.0
     assert condensed["sells"][0]["ticker"] == "ABC"
     assert condensed["sells"][0]["votes"] == 2
+
+
+def test_parse_int_arg_supports_commas_and_all_keyword():
+    assert parse_int_arg("10,000", arg_name="--limit", allow_none=True) == 10000
+    assert parse_int_arg("all", arg_name="--limit", allow_none=True) is None
+
+
+def test_parse_int_arg_rejects_invalid_values():
+    try:
+        parse_int_arg("not-a-number", arg_name="--limit")
+        assert False, "Expected parse_int_arg to raise"
+    except Exception as exc:
+        assert "integer" in str(exc)

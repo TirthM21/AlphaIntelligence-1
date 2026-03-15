@@ -64,6 +64,18 @@ def get_strategy_method_catalogue() -> dict[str, list[dict[str, Any]]]:
                 "objective": "Rebalance around earnings, tax deadlines, and macro catalysts.",
                 "signals": ["event_risk_level", "sector_relative_momentum", "liquidity_shift"],
             },
+            {
+                "id": "cross_sectional_momentum",
+                "name": "Cross-Sectional Momentum Ranking",
+                "objective": "Rank winners versus laggards across sectors with volatility scaling.",
+                "signals": ["relative_return_3m", "relative_return_6m", "volatility_adjustment"],
+            },
+            {
+                "id": "quality_low_vol",
+                "name": "Quality + Low Volatility Blend",
+                "objective": "Tilt toward durable balance sheets while minimizing drawdown sensitivity.",
+                "signals": ["earnings_stability", "beta", "downside_deviation"],
+            },
         ],
     }
 
