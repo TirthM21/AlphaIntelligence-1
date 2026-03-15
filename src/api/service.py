@@ -12,7 +12,13 @@ from typing import Any, Dict, Optional, Tuple
 
 from src.data.provider_health import provider_health
 from src.database.db_manager import DBManager
-from src.research.crowwd_closing_bell import ClosingBellConfig, build_timeline, rewards_catalogue, simulation_snapshot
+from src.research.crowwd_closing_bell import (
+    ClosingBellConfig,
+    build_timeline,
+    competitor_playbook,
+    rewards_catalogue,
+    simulation_snapshot,
+)
 from src.strategies.method_catalog import get_strategy_method_catalogue
 
 
@@ -47,6 +53,7 @@ class APIService:
             "/health/pipeline": self.get_health_pipeline,
             "/events/crowwd/closing-bell": self.get_crowwd_closing_bell,
             "/strategies/methods": self.get_strategy_methods,
+            "/events/crowwd/closing-bell/playbook": self.get_crowwd_playbook,
         }
 
         handler = routes.get(path)
@@ -199,6 +206,31 @@ class APIService:
             "rewards": rewards_catalogue(),
         }
 
+
+    def get_crowwd_playbook(
+        self,
+        as_of: Optional[str] = None,
+        risk_level: str = "balanced",
+        style: str = "hybrid",
+    ) -> Dict[str, Any]:
+        """Return participant-focused winning playbook for the Crowwd competition."""
+        if as_of:
+            try:
+                parsed_date = datetime.fromisoformat(as_of).date()
+            except ValueError:
+                raise APIServiceError("as_of must be ISO date (YYYY-MM-DD)", code="invalid_as_of")
+        else:
+            parsed_date = datetime.utcnow().date()
+
+        return {
+            "as_of": parsed_date.isoformat(),
+            "playbook": competitor_playbook(
+                as_of=parsed_date,
+                risk_level=risk_level,
+                style=style,
+                config=ClosingBellConfig(),
+            ),
+        }
     def get_strategy_methods(self) -> Dict[str, Any]:
         """Return strategy method catalogue (value-investing and algorithmic tracks)."""
         catalogue = get_strategy_method_catalogue()

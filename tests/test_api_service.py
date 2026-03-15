@@ -172,6 +172,16 @@ def test_crowwd_event_and_strategy_method_contracts():
     assert methods_payload["summary"]["track_count"] == 2
     assert methods_payload["summary"]["method_count"] >= 6
 
+    status, playbook_payload = service.handle_request(
+        "/events/crowwd/closing-bell/playbook",
+        as_of="2026-03-30",
+        risk_level="aggressive",
+        style="momentum",
+    )
+    assert status == 200
+    assert playbook_payload["playbook"]["phase"] == "fy-end-volatility"
+    assert playbook_payload["playbook"]["positioning"]["max_positions"] == 16
+
 
 def test_error_handling_contract_for_bad_inputs_and_unknown_route():
     service = APIService(db_manager=EmptyDBManager())
@@ -201,3 +211,9 @@ def test_error_handling_contract_for_bad_inputs_and_unknown_route():
     status, invalid_as_of = service.handle_request("/events/crowwd/closing-bell", as_of="03-30-2026")
     assert status == 400
     assert invalid_as_of["error"]["code"] == "invalid_as_of"
+
+    status, invalid_as_of_playbook = service.handle_request(
+        "/events/crowwd/closing-bell/playbook", as_of="03-30-2026"
+    )
+    assert status == 400
+    assert invalid_as_of_playbook["error"]["code"] == "invalid_as_of"

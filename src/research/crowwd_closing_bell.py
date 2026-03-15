@@ -102,3 +102,62 @@ def rewards_catalogue() -> list[str]:
         "Event Invitations for exclusive networking events in Delhi and Mumbai.",
         "Early Access and Merch for upcoming student programs and Crowwd merchandise.",
     ]
+
+
+def competitor_playbook(
+    as_of: date,
+    risk_level: str = "balanced",
+    style: str = "hybrid",
+    config: ClosingBellConfig | None = None,
+) -> dict[str, Any]:
+    """Build a participant-focused playbook to maximize leaderboard performance."""
+    cfg = config or ClosingBellConfig()
+    snapshot = simulation_snapshot(as_of=as_of, config=cfg)
+    phase = snapshot["phase"]
+
+    normalized_risk = risk_level.strip().lower()
+    if normalized_risk not in {"conservative", "balanced", "aggressive"}:
+        normalized_risk = "balanced"
+
+    normalized_style = style.strip().lower()
+    if normalized_style not in {"value", "momentum", "hybrid"}:
+        normalized_style = "hybrid"
+
+    cash_floor_by_risk = {"conservative": 0.4, "balanced": 0.25, "aggressive": 0.1}
+    risk_per_trade_by_risk = {"conservative": 0.0075, "balanced": 0.0125, "aggressive": 0.02}
+    max_positions_by_risk = {"conservative": 8, "balanced": 12, "aggressive": 16}
+
+    phase_focus = {
+        "pre-launch": "Prepare watchlists and position templates before day 1.",
+        "opening-leg": "Build initial book quality-first; avoid overtrading early noise.",
+        "fy-end-volatility": "Exploit volatility with tighter stops and faster review loops.",
+        "fy26-positioning": "Rotate to leaders with fresh FY momentum and avoid laggards.",
+        "closed": "Review trades, document edge, and prepare interview-ready notes.",
+    }
+
+    style_focus = {
+        "value": "Prioritize quality value + earnings durability setups.",
+        "momentum": "Prioritize breakout strength, volume confirmation, and trend follow-through.",
+        "hybrid": "Blend value filters with momentum timing for higher hit-rate entries.",
+    }
+
+    checklist = [
+        "Run pre-market scan and shortlist only A+ setups.",
+        "Define invalidation and stop-loss before entry.",
+        "Update leaderboard delta and open risk after market close.",
+        "Journal top 3 decisions (good and bad) daily.",
+    ]
+
+    return {
+        "phase": phase,
+        "risk_level": normalized_risk,
+        "style": normalized_style,
+        "positioning": {
+            "cash_floor_pct": round(cash_floor_by_risk[normalized_risk] * 100, 1),
+            "risk_per_trade_pct": round(risk_per_trade_by_risk[normalized_risk] * 100, 2),
+            "max_positions": max_positions_by_risk[normalized_risk],
+        },
+        "focus": [phase_focus[phase], style_focus[normalized_style]],
+        "daily_checklist": checklist,
+        "win_condition": "Protect downside first, then compound into confirmed leaders.",
+    }

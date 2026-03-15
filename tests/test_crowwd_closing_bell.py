@@ -3,6 +3,7 @@ from datetime import date
 from src.research.crowwd_closing_bell import (
     ClosingBellConfig,
     build_timeline,
+    competitor_playbook,
     rewards_catalogue,
     simulation_snapshot,
 )
@@ -33,3 +34,13 @@ def test_rewards_catalogue_contains_ppi_internship_reward():
 
     assert len(rewards) >= 6
     assert any("Pre-Placement Interview" in reward for reward in rewards)
+
+
+def test_competitor_playbook_is_participant_focused_and_phase_aware():
+    playbook = competitor_playbook(as_of=date(2026, 3, 30), risk_level="aggressive", style="momentum")
+
+    assert playbook["phase"] == "fy-end-volatility"
+    assert playbook["risk_level"] == "aggressive"
+    assert playbook["style"] == "momentum"
+    assert playbook["positioning"]["risk_per_trade_pct"] == 2.0
+    assert any("volatility" in item.lower() for item in playbook["focus"])
