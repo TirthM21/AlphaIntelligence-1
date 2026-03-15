@@ -1,0 +1,23 @@
+{
+  "data": {
+    "ticker": "GLOTTIS.NS",
+    "fetch_date": "2026-03-15T10:34:40.045063",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 1977317000.0,
+      "2025-03-31 00:00:00": 3071244000.0,
+      "2025-12-31 00:00:00": 1438704000.0
+    },
+    "revenue_qoq_change": -53.155659400555614,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 1.457864,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 0.29
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 4.68,
+    "margin_change": -3.42,
+    "operating_margin": 2.36,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:34:40.046396"
+}

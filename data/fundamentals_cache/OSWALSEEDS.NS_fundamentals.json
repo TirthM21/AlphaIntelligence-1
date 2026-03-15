@@ -1,0 +1,25 @@
+{
+  "data": {
+    "ticker": "OSWALSEEDS.NS",
+    "fetch_date": "2026-03-15T10:45:03.718831",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 769499000.0,
+      "2024-09-30 00:00:00": 676902000.0
+    },
+    "revenue_qoq_change": -12.03341394855614,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": -0.3,
+      "2024-09-30 00:00:00": 0.04
+    },
+    "eps_qoq_change": 113.33333333333333,
+    "gross_margin": 3.91,
+    "margin_change": 5.0,
+    "operating_margin": 2.07,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 273813000.0
+    },
+    "inventory_to_sales_ratio": 0.405,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:45:03.720481"
+}

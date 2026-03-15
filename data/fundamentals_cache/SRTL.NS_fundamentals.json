@@ -1,0 +1,20 @@
+{
+  "data": {
+    "ticker": "SRTL.NS",
+    "fetch_date": "2026-03-15T10:51:13.794116",
+    "quarterly_revenue": {
+      "2025-03-31 00:00:00": 1017393000.0
+    },
+    "gross_margin": 5.39,
+    "operating_margin": 2.69,
+    "quarterly_inventory": {
+      "2024-12-31 00:00:00": 244673000.0,
+      "2025-03-31 00:00:00": 639769000.0,
+      "2025-09-30 00:00:00": 874764000.0
+    },
+    "inventory_qoq_change": 36.73,
+    "inventory_to_sales_ratio": 0.86,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:51:13.795106"
+}

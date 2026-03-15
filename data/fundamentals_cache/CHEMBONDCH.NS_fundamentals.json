@@ -1,0 +1,27 @@
+{
+  "data": {
+    "ticker": "CHEMBONDCH.NS",
+    "fetch_date": "2026-03-15T10:30:05.628146",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 748782000.0,
+      "2025-03-31 00:00:00": 771689000.0,
+      "2025-12-31 00:00:00": 863457000.0
+    },
+    "revenue_qoq_change": 11.891837255682017,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 3.707312,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 3.62
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 48.09,
+    "margin_change": 19.84,
+    "operating_margin": 12.79,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 182590000.0
+    },
+    "inventory_to_sales_ratio": 0.211,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:30:05.629775"
+}

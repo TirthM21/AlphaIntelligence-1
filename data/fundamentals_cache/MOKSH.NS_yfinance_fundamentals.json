@@ -1,0 +1,22 @@
+{
+  "ticker": "MOKSH.NS",
+  "fetch_date": "2026-03-15T11:22:58.788609",
+  "quarterly_revenue": {
+    "2024-06-30 00:00:00": 1368226000.0,
+    "2024-09-30 00:00:00": 1584477000.0
+  },
+  "revenue_qoq_change": 15.805210542702742,
+  "quarterly_eps": {
+    "2024-06-30 00:00:00": 0.368604,
+    "2024-09-30 00:00:00": 0.394933
+  },
+  "eps_qoq_change": 7.142895899122091,
+  "gross_margin": 7.16,
+  "margin_change": 0.18,
+  "operating_margin": 2.77,
+  "quarterly_inventory": {
+    "2024-09-30 00:00:00": 658502000.0
+  },
+  "inventory_to_sales_ratio": 0.416,
+  "inventory_breakdown_available": false
+}

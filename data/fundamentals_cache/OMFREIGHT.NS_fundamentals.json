@@ -1,0 +1,23 @@
+{
+  "data": {
+    "ticker": "OMFREIGHT.NS",
+    "fetch_date": "2026-03-15T10:44:31.336837",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 1164800000.0,
+      "2025-03-31 00:00:00": 1214220000.0,
+      "2025-12-31 00:00:00": 1191100000.0
+    },
+    "revenue_qoq_change": -1.9041030455765842,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 0.489971,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 1.38
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 8.7,
+    "margin_change": -0.57,
+    "operating_margin": 4.11,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:44:31.338176"
+}

@@ -1,0 +1,31 @@
+{
+  "data": {
+    "ticker": "ABMINTLLTD.NS",
+    "fetch_date": "2026-03-15T10:24:51.119847",
+    "quarterly_revenue": {
+      "2024-09-30 00:00:00": 167029000.0,
+      "2024-12-31 00:00:00": 166821000.0,
+      "2025-03-31 00:00:00": 176723000.0,
+      "2025-09-30 00:00:00": 104595000.0
+    },
+    "revenue_qoq_change": -40.81415548626947,
+    "quarterly_eps": {
+      "2024-09-30 00:00:00": -0.53,
+      "2024-12-31 00:00:00": -2.2,
+      "2025-03-31 00:00:00": NaN,
+      "2025-09-30 00:00:00": -0.43
+    },
+    "eps_qoq_change": null,
+    "gross_margin": -2.39,
+    "margin_change": 9.93,
+    "operating_margin": -4.44,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 99332000.0,
+      "2025-09-30 00:00:00": 80206000.0
+    },
+    "inventory_qoq_change": -19.25,
+    "inventory_to_sales_ratio": 0.767,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:24:51.121650"
+}

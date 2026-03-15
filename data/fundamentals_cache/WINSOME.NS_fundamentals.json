@@ -1,0 +1,31 @@
+{
+  "data": {
+    "ticker": "WINSOME.NS",
+    "fetch_date": "2026-03-15T10:55:46.213281",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 8100000.0,
+      "2024-09-30 00:00:00": 14600000.0,
+      "2024-12-31 00:00:00": 11400000.0,
+      "2025-03-31 00:00:00": 7708000.0
+    },
+    "revenue_qoq_change": -32.3859649122807,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": -0.66,
+      "2024-09-30 00:00:00": -0.72,
+      "2024-12-31 00:00:00": -0.55,
+      "2025-03-31 00:00:00": NaN
+    },
+    "eps_qoq_change": null,
+    "gross_margin": -124.52,
+    "margin_change": -204.34,
+    "operating_margin": -518.69,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 21300000.0,
+      "2025-03-31 00:00:00": 15654000.0
+    },
+    "inventory_qoq_change": -26.51,
+    "inventory_to_sales_ratio": 2.031,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:55:46.215101"
+}

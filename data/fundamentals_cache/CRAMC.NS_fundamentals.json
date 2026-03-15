@@ -1,0 +1,21 @@
+{
+  "data": {
+    "ticker": "CRAMC.NS",
+    "fetch_date": "2026-03-15T10:30:47.165834",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 959998000.0,
+      "2025-12-31 00:00:00": 1097701000.0
+    },
+    "revenue_qoq_change": 14.3440923835258,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 2.39987,
+      "2025-12-31 00:00:00": 2.65
+    },
+    "eps_qoq_change": 10.422647893427559,
+    "gross_margin": 70.12,
+    "margin_change": -9.22,
+    "operating_margin": 54.02,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:30:47.167132"
+}

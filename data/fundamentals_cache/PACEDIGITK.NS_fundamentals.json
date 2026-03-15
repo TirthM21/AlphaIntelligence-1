@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "PACEDIGITK.NS",
+    "fetch_date": "2026-03-15T10:45:04.551746",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 5671590000.0,
+      "2025-03-31 00:00:00": 6832550000.0,
+      "2025-12-31 00:00:00": 6439660000.0
+    },
+    "revenue_qoq_change": -5.75026893326796,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 3.251451,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 3.85
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 26.27,
+    "margin_change": 7.25,
+    "operating_margin": 17.6,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 2133550000.0,
+      "2025-03-31 00:00:00": 1126290000.0
+    },
+    "inventory_qoq_change": -47.21,
+    "inventory_to_sales_ratio": 0.175,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:45:04.553495"
+}

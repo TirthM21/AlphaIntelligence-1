@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "NEPHROPLUS.NS",
+    "fetch_date": "2026-03-15T10:43:42.323889",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 1972570000.0,
+      "2025-03-31 00:00:00": 2117250000.0,
+      "2025-12-31 00:00:00": 2597290000.0
+    },
+    "revenue_qoq_change": 22.672806706813084,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 2.004067,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 3.35
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 41.36,
+    "margin_change": -3.24,
+    "operating_margin": 15.02,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 266230000.0,
+      "2025-09-30 00:00:00": 340370000.0
+    },
+    "inventory_qoq_change": 27.85,
+    "inventory_to_sales_ratio": 0.131,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:43:42.325653"
+}

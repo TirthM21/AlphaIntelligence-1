@@ -1,0 +1,27 @@
+{
+  "data": {
+    "ticker": "ANSALAPI.NS",
+    "fetch_date": "2026-03-15T10:26:17.287790",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 1166400000.0,
+      "2024-09-30 00:00:00": 2266200000.0,
+      "2024-12-31 00:00:00": 2343900000.0
+    },
+    "revenue_qoq_change": 3.42864707439767,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": -1.96,
+      "2024-09-30 00:00:00": -18.37,
+      "2024-12-31 00:00:00": 9.88
+    },
+    "eps_qoq_change": 153.7833424060969,
+    "gross_margin": 40.22,
+    "margin_change": 76.56,
+    "operating_margin": 3.5,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 35859785000.0
+    },
+    "inventory_to_sales_ratio": 15.299,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:26:17.289464"
+}

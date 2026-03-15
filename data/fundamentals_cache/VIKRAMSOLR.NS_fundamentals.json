@@ -1,0 +1,27 @@
+{
+  "data": {
+    "ticker": "VIKRAMSOLR.NS",
+    "fetch_date": "2026-03-15T10:54:54.613671",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 10260460000.0,
+      "2025-03-31 00:00:00": 11935210000.0,
+      "2025-12-31 00:00:00": 11059520000.0
+    },
+    "revenue_qoq_change": -7.337030517267815,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 0.525825,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 2.7
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 31.05,
+    "margin_change": 2.76,
+    "operating_margin": 15.23,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 4286320000.0
+    },
+    "inventory_to_sales_ratio": 0.388,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:54:54.615348"
+}

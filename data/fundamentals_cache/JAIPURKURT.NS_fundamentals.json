@@ -1,0 +1,16 @@
+{
+  "data": {
+    "ticker": "JAIPURKURT.NS",
+    "fetch_date": "2026-03-15T10:38:17.267143",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 180418000.0
+    },
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": 0.85572
+    },
+    "gross_margin": 48.83,
+    "operating_margin": 11.41,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:38:17.267885"
+}

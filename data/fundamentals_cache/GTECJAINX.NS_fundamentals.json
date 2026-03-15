@@ -1,0 +1,31 @@
+{
+  "data": {
+    "ticker": "GTECJAINX.NS",
+    "fetch_date": "2026-03-15T10:35:23.226147",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 24592000.0,
+      "2024-09-30 00:00:00": 21653000.0,
+      "2024-12-31 00:00:00": 13731000.0,
+      "2025-03-31 00:00:00": 17322000.0
+    },
+    "revenue_qoq_change": 26.152501638627925,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": 0.17,
+      "2024-09-30 00:00:00": 0.01,
+      "2024-12-31 00:00:00": -2.8,
+      "2025-03-31 00:00:00": NaN
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 67.17,
+    "margin_change": 2.73,
+    "operating_margin": 86.95,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 1114000.0,
+      "2025-03-31 00:00:00": 392000.0
+    },
+    "inventory_qoq_change": -64.81,
+    "inventory_to_sales_ratio": 0.023,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:35:23.227907"
+}

@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "PANSARI.NS",
+    "fetch_date": "2026-03-15T10:45:11.732921",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 76297000.0,
+      "2024-12-31 00:00:00": 41985000.0,
+      "2025-03-31 00:00:00": 88855000.0,
+      "2025-06-30 00:00:00": 177425000.0
+    },
+    "revenue_qoq_change": 99.67925271509763,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": 0.54,
+      "2024-12-31 00:00:00": 0.15,
+      "2025-03-31 00:00:00": NaN,
+      "2025-06-30 00:00:00": 2.37
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 35.53,
+    "margin_change": 67.73,
+    "operating_margin": 27.73,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 1625820000.0
+    },
+    "inventory_to_sales_ratio": 9.163,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:45:11.734584"
+}

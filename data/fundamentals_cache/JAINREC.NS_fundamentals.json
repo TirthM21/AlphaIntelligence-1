@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "JAINREC.NS",
+    "fetch_date": "2026-03-15T10:38:16.555105",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 17807610000.0,
+      "2025-03-31 00:00:00": 23959890000.0,
+      "2025-12-31 00:00:00": 27751740000.0
+    },
+    "revenue_qoq_change": 15.82582390820659,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 1.610324,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 3.66
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 10.03,
+    "margin_change": 5.96,
+    "operating_margin": 7.03,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 5251340000.0,
+      "2025-03-31 00:00:00": 6543350000.0
+    },
+    "inventory_qoq_change": 24.6,
+    "inventory_to_sales_ratio": 0.236,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:38:16.556882"
+}

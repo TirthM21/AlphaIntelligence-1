@@ -1,0 +1,23 @@
+{
+  "data": {
+    "ticker": "ARSSBL.NS",
+    "fetch_date": "2026-03-15T10:26:46.220804",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 2039930000.0,
+      "2025-03-31 00:00:00": 574030000.0,
+      "2025-12-31 00:00:00": 2485590000.0
+    },
+    "revenue_qoq_change": 333.00698569761164,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 4.671343,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 7.29
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 56.48,
+    "margin_change": 108.6,
+    "operating_margin": 38.1,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:26:46.222185"
+}

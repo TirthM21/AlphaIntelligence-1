@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "WAKEFIT.NS",
+    "fetch_date": "2026-03-15T10:55:29.378515",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 3851750000.0,
+      "2025-03-31 00:00:00": 2849630000.0,
+      "2025-12-31 00:00:00": 4213400000.0
+    },
+    "revenue_qoq_change": 47.8577920642329,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": -0.073678,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 1.01
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 53.83,
+    "margin_change": 11.72,
+    "operating_margin": 7.52,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 1636290000.0,
+      "2025-09-30 00:00:00": 2617940000.0
+    },
+    "inventory_qoq_change": 59.99,
+    "inventory_to_sales_ratio": 0.621,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:55:29.380262"
+}

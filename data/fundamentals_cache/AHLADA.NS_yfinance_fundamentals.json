@@ -1,0 +1,24 @@
+{
+  "ticker": "AHLADA.NS",
+  "fetch_date": "2026-03-15T11:05:35.708198",
+  "quarterly_revenue": {
+    "2024-09-30 00:00:00": 261178000.0,
+    "2025-09-30 00:00:00": 236575000.0
+  },
+  "revenue_qoq_change": -9.420012405332761,
+  "quarterly_eps": {
+    "2024-09-30 00:00:00": 0.4,
+    "2025-09-30 00:00:00": 0.34
+  },
+  "eps_qoq_change": -15.0,
+  "gross_margin": 46.66,
+  "margin_change": 0.44,
+  "operating_margin": 6.31,
+  "quarterly_inventory": {
+    "2024-09-30 00:00:00": 223966000.0,
+    "2025-09-30 00:00:00": 350695000.0
+  },
+  "inventory_qoq_change": 56.58,
+  "inventory_to_sales_ratio": 1.482,
+  "inventory_breakdown_available": false
+}

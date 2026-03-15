@@ -1,0 +1,24 @@
+{
+  "ticker": "AGSTRA.NS",
+  "fetch_date": "2026-03-15T11:09:04.204796",
+  "quarterly_revenue": {
+    "2024-06-30 00:00:00": 3397880000.0,
+    "2024-09-30 00:00:00": 3516920000.0,
+    "2024-12-31 00:00:00": 2095950000.0
+  },
+  "revenue_qoq_change": -40.40381925093548,
+  "quarterly_eps": {
+    "2024-06-30 00:00:00": 1.13,
+    "2024-09-30 00:00:00": 1.23,
+    "2024-12-31 00:00:00": -15.99
+  },
+  "eps_qoq_change": -1400.0,
+  "gross_margin": 72.39,
+  "margin_change": -2.78,
+  "operating_margin": -103.96,
+  "quarterly_inventory": {
+    "2024-09-30 00:00:00": 643710000.0
+  },
+  "inventory_to_sales_ratio": 0.307,
+  "inventory_breakdown_available": false
+}

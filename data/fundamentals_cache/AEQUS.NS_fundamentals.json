@@ -1,0 +1,29 @@
+{
+  "data": {
+    "ticker": "AEQUS.NS",
+    "fetch_date": "2026-03-15T10:25:15.554615",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 2163430000.0,
+      "2025-03-31 00:00:00": 2226470000.0,
+      "2025-12-31 00:00:00": 3261730000.0
+    },
+    "revenue_qoq_change": 46.49781941818215,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": -0.607983,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": -0.7
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 43.82,
+    "margin_change": 31.02,
+    "operating_margin": -1.84,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 4082690000.0,
+      "2025-09-30 00:00:00": 4591240000.0
+    },
+    "inventory_qoq_change": 12.46,
+    "inventory_to_sales_ratio": 1.408,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:25:15.556461"
+}

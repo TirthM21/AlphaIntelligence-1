@@ -1,0 +1,23 @@
+{
+  "data": {
+    "ticker": "ICICIAMC.NS",
+    "fetch_date": "2026-03-15T10:36:47.595273",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 12266600000.0,
+      "2025-03-31 00:00:00": 12691900000.0,
+      "2025-12-31 00:00:00": 15146700000.0
+    },
+    "revenue_qoq_change": 19.34146975630126,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 12.78,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 18.55
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 81.88,
+    "margin_change": -6.83,
+    "operating_margin": 73.57,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:36:47.596638"
+}

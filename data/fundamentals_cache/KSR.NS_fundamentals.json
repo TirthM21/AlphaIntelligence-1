@@ -1,0 +1,23 @@
+{
+  "data": {
+    "ticker": "KSR.NS",
+    "fetch_date": "2026-03-15T10:40:21.178898",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 499390000.0,
+      "2025-03-31 00:00:00": -1504190000.0,
+      "2025-12-31 00:00:00": 451690000.0
+    },
+    "revenue_qoq_change": -130.0287862570553,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": -2.78697,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 2.08
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 27.59,
+    "margin_change": NaN,
+    "operating_margin": 15.07,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:40:21.180225"
+}

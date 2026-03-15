@@ -1,0 +1,22 @@
+{
+  "ticker": "OSIAHYPER.NS",
+  "fetch_date": "2026-03-15T11:06:58.368886",
+  "quarterly_revenue": {
+    "2024-09-30 00:00:00": 3552281000.0,
+    "2025-09-30 00:00:00": 3730410000.0
+  },
+  "revenue_qoq_change": 5.014496319407164,
+  "quarterly_eps": {
+    "2024-09-30 00:00:00": 0.29,
+    "2025-09-30 00:00:00": 0.29
+  },
+  "eps_qoq_change": 0.0,
+  "gross_margin": 12.12,
+  "margin_change": -0.48,
+  "operating_margin": 2.85,
+  "quarterly_inventory": {
+    "2025-09-30 00:00:00": 4854891000.0
+  },
+  "inventory_to_sales_ratio": 1.301,
+  "inventory_breakdown_available": false
+}

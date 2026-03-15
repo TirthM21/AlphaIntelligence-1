@@ -1,0 +1,24 @@
+{
+  "ticker": "AGROPHOS.NS",
+  "fetch_date": "2026-03-15T11:24:19.611832",
+  "quarterly_revenue": {
+    "2024-06-30 00:00:00": 239162000.0,
+    "2024-09-30 00:00:00": 315046000.0,
+    "2024-12-31 00:00:00": 228082000.0
+  },
+  "revenue_qoq_change": -27.603588047459738,
+  "quarterly_eps": {
+    "2024-06-30 00:00:00": -0.1,
+    "2024-09-30 00:00:00": 0.214362,
+    "2024-12-31 00:00:00": 1.22
+  },
+  "eps_qoq_change": 469.13072279601795,
+  "gross_margin": 35.82,
+  "margin_change": 3.34,
+  "operating_margin": 16.18,
+  "quarterly_inventory": {
+    "2024-09-30 00:00:00": 303775000.0
+  },
+  "inventory_to_sales_ratio": 1.332,
+  "inventory_breakdown_available": false
+}

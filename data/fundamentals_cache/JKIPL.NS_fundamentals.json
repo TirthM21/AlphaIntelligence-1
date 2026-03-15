@@ -1,0 +1,27 @@
+{
+  "data": {
+    "ticker": "JKIPL.NS",
+    "fetch_date": "2026-03-15T10:38:37.973463",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 18286680000.0,
+      "2025-03-31 00:00:00": -26456120000.0,
+      "2025-12-31 00:00:00": 4392530000.0
+    },
+    "revenue_qoq_change": -116.6030770952052,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 31.101183,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": -2.21
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 17.99,
+    "margin_change": 1.74,
+    "operating_margin": -20.32,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 222296000.0
+    },
+    "inventory_to_sales_ratio": 0.051,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:38:37.975101"
+}

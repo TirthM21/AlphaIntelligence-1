@@ -1,0 +1,27 @@
+{
+  "data": {
+    "ticker": "WEWORK.NS",
+    "fetch_date": "2026-03-15T10:55:41.271796",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 4916580000.0,
+      "2025-03-31 00:00:00": 5393670000.0,
+      "2025-12-31 00:00:00": 6341050000.0
+    },
+    "revenue_qoq_change": 17.564663763263233,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": -6.211758,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 1.22
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 98.61,
+    "margin_change": 2.23,
+    "operating_margin": 25.54,
+    "quarterly_inventory": {
+      "2025-03-31 00:00:00": 6630000.0
+    },
+    "inventory_to_sales_ratio": 0.001,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:55:41.273531"
+}

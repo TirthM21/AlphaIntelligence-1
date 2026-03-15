@@ -1,0 +1,24 @@
+{
+  "ticker": "SVLL.NS",
+  "fetch_date": "2026-03-15T11:26:27.535957",
+  "quarterly_revenue": {
+    "2024-09-30 00:00:00": 345975000.0,
+    "2025-09-30 00:00:00": 559703000.0
+  },
+  "revenue_qoq_change": 61.77556181805044,
+  "quarterly_eps": {
+    "2024-09-30 00:00:00": -0.04,
+    "2025-09-30 00:00:00": 0.9
+  },
+  "eps_qoq_change": 2350.0,
+  "gross_margin": 65.75,
+  "margin_change": 4.75,
+  "operating_margin": 9.13,
+  "quarterly_inventory": {
+    "2024-09-30 00:00:00": 43016000.0,
+    "2025-09-30 00:00:00": 47181000.0
+  },
+  "inventory_qoq_change": 9.68,
+  "inventory_to_sales_ratio": 0.084,
+  "inventory_breakdown_available": false
+}

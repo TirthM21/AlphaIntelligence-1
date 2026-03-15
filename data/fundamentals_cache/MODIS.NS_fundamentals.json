@@ -1,0 +1,30 @@
+{
+  "data": {
+    "ticker": "MODIS.NS",
+    "fetch_date": "2026-03-15T10:42:39.532532",
+    "quarterly_revenue": {
+      "2024-12-31 00:00:00": 320151000.0,
+      "2025-03-31 00:00:00": 187646000.0,
+      "2025-12-31 00:00:00": 544345000.0
+    },
+    "revenue_qoq_change": 190.09144879187406,
+    "quarterly_eps": {
+      "2024-12-31 00:00:00": 3.58,
+      "2025-03-31 00:00:00": NaN,
+      "2025-12-31 00:00:00": 6.47
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 31.7,
+    "margin_change": 21.93,
+    "operating_margin": 26.44,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 1113735000.0,
+      "2025-03-31 00:00:00": 1466978000.0,
+      "2025-09-30 00:00:00": 1491777000.0
+    },
+    "inventory_qoq_change": 1.69,
+    "inventory_to_sales_ratio": 2.74,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:42:39.534279"
+}

@@ -1,0 +1,31 @@
+{
+  "data": {
+    "ticker": "ARTNIRMAN.NS",
+    "fetch_date": "2026-03-15T10:26:50.067809",
+    "quarterly_revenue": {
+      "2024-06-30 00:00:00": 55000000.0,
+      "2024-09-30 00:00:00": 84613000.0,
+      "2024-12-31 00:00:00": 45000000.0,
+      "2025-03-31 00:00:00": 89239000.0
+    },
+    "revenue_qoq_change": 98.30888888888889,
+    "quarterly_eps": {
+      "2024-06-30 00:00:00": 0.16,
+      "2024-09-30 00:00:00": 0.21,
+      "2024-12-31 00:00:00": 0.11,
+      "2025-03-31 00:00:00": NaN
+    },
+    "eps_qoq_change": null,
+    "gross_margin": 118.92,
+    "margin_change": 18.54,
+    "operating_margin": 19.34,
+    "quarterly_inventory": {
+      "2024-09-30 00:00:00": 305390000.0,
+      "2025-03-31 00:00:00": 422144000.0
+    },
+    "inventory_qoq_change": 38.23,
+    "inventory_to_sales_ratio": 4.73,
+    "inventory_breakdown_available": false
+  },
+  "fetched_at": "2026-03-15T10:26:50.069602"
+}
