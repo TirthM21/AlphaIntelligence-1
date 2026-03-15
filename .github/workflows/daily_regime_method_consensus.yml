@@ -1,0 +1,61 @@
+name: Daily Regime Method Consensus (Competition)
+
+on:
+  schedule:
+    - cron: '35 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated symbols (e.g. RELIANCE.NS,TCS.NS,INFY.NS)'
+        required: false
+        default: 'RELIANCE.NS,TCS.NS,INFY.NS,HDFCBANK.NS,ICICIBANK.NS,SBIN.NS,LT.NS,ITC.NS,HINDUNILVR.NS,BHARTIARTL.NS'
+      top_n:
+        description: 'Top BUY/SELL ideas to keep'
+        required: false
+        default: '12'
+
+jobs:
+  consensus:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate regime-method consensus
+        run: |
+          mkdir -p data/competition_signals
+          python scripts/competition/generate_regime_method_consensus.py \
+            --symbols "${{ github.event.inputs.symbols || 'RELIANCE.NS,TCS.NS,INFY.NS,HDFCBANK.NS,ICICIBANK.NS,SBIN.NS,LT.NS,ITC.NS,HINDUNILVR.NS,BHARTIARTL.NS' }}" \
+            --top-n "${{ github.event.inputs.top_n || '12' }}"
+
+      - name: Preview condensed output
+        if: always()
+        run: |
+          if [ -f "data/competition_signals/latest_regime_method_consensus.md" ]; then
+            head -n 120 data/competition_signals/latest_regime_method_consensus.md
+          else
+            echo "No output markdown generated"
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regime-method-consensus-${{ github.run_id }}
+          path: |
+            data/competition_signals/latest_regime_method_consensus.json
+            data/competition_signals/latest_regime_method_consensus.md
+          if-no-files-found: warn
+          retention-days: 30

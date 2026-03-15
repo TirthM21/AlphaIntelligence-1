@@ -88,11 +88,39 @@ General connection-string format: `<dialect>[+driver]://<username>:<password>@<h
 | **Standalone Technical Signals Scan** | `python run_technical_signals_scan.py --workers 8 --send-email` |
 | **F&O Tracking Dashboard** | `python run_derivatives_dashboard.py --symbols nifty,banknifty,reliance` |
 | **Backtesting Streamlit Dashboard** | `./run_backtesting_dashboard.sh` (uses `dashboard/backtesting_dashboard.py`) |
+| **Crowwd Closing Bell Participant Dashboard** | `./run_closing_bell_dashboard.sh` (uses `dashboard/closing_bell_dashboard.py`) |
 | **Backtesting + Email Workflow** | `python run_backtesting_workflow.py --symbols RELIANCE,HDFCBANK,TCS,INFY --send-email` |
 | **Walk-forward Experiment Runner** | `python run_walk_forward_experiments.py --symbol RELIANCE --years 5 --db-path experiments/metrics.db` |
 | **YAML Grid Experiment Runner** | `python run_experiments.py --config config/experiment_grid.yaml --output-dir data/experiments` |
 
 > **Command example consistency note:** examples above are NSE-first and represent the current production target.
+
+### API Service Extensions
+
+The in-repo API service (`src/api/service.py`) includes additional event + strategy metadata endpoints:
+
+- `/events/crowwd/closing-bell` → Crowwd timeline, rewards, and live phase snapshot (`as_of=YYYY-MM-DD` optional).
+- `/strategies/methods` → method catalogue grouped into `value_investing` and `algorithmic` tracks.
+- `/events/crowwd/closing-bell/playbook` → participant-focused competition playbook (risk/style aware).
+
+These contracts are covered in `tests/test_api_service.py`.
+
+### Competition Daily Condensed Signals
+
+A dedicated workflow builds a daily BUY/SELL consensus list for competition mode by combining the existing strategy adapters:
+
+- Workflow: `.github/workflows/daily_competition_signals.yml`
+- Script: `python scripts/competition/generate_daily_competition_list.py --limit 180 --top-n 15`
+- Outputs:
+  - `data/competition_signals/latest_competition_signals.md`
+  - `data/competition_signals/latest_competition_signals.json`
+
+The JSON output includes method-catalog metadata and a research-model registry (implemented/partial/planned) so you can track what is already active versus queued for future integration.
+
+- Regime workflow: `.github/workflows/daily_regime_method_consensus.yml`
+- Regime script: `python scripts/competition/generate_regime_method_consensus.py --top-n 12`
+
+This regime workflow uses a 65-method library (`src/strategies/competition_method_framework.py`) with explicit statuses (`implemented`, `partial`, `planned`) and produces daily regime-aware BUY/SELL consensus outputs.
 
 ### YAML Grid Experiment Config
 

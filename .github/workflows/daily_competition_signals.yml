@@ -1,0 +1,61 @@
+name: Daily Competition Signals (Crowwd)
+
+on:
+  schedule:
+    - cron: '20 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Universe limit for each strategy run'
+        required: false
+        default: '180'
+      top_n:
+        description: 'Top BUY/SELL ideas in condensed list'
+        required: false
+        default: '15'
+
+jobs:
+  competition-signals:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate condensed competition signals
+        run: |
+          mkdir -p data/competition_signals
+          python scripts/competition/generate_daily_competition_list.py \
+            --limit "${{ github.event.inputs.limit || '180' }}" \
+            --top-n "${{ github.event.inputs.top_n || '15' }}"
+
+      - name: Show latest condensed list preview
+        if: always()
+        run: |
+          if [ -f "data/competition_signals/latest_competition_signals.md" ]; then
+            head -n 80 data/competition_signals/latest_competition_signals.md
+          else
+            echo "No condensed markdown generated"
+          fi
+
+      - name: Upload condensed signal artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: competition-signals-${{ github.run_id }}
+          path: |
+            data/competition_signals/
+            data/daily_scans/latest_optimized_scan.txt
+          if-no-files-found: warn
+          retention-days: 30

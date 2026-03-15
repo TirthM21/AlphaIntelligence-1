@@ -12,6 +12,14 @@ from typing import Any, Dict, Optional, Tuple
 
 from src.data.provider_health import provider_health
 from src.database.db_manager import DBManager
+from src.research.crowwd_closing_bell import (
+    ClosingBellConfig,
+    build_timeline,
+    competitor_playbook,
+    rewards_catalogue,
+    simulation_snapshot,
+)
+from src.strategies.method_catalog import get_strategy_method_catalogue
 
 
 class APIServiceError(Exception):
@@ -43,6 +51,9 @@ class APIService:
             "/portfolio/performance": self.get_portfolio_performance,
             "/health/providers": self.get_health_providers,
             "/health/pipeline": self.get_health_pipeline,
+            "/events/crowwd/closing-bell": self.get_crowwd_closing_bell,
+            "/strategies/methods": self.get_strategy_methods,
+            "/events/crowwd/closing-bell/playbook": self.get_crowwd_playbook,
         }
 
         handler = routes.get(path)
@@ -162,6 +173,75 @@ class APIService:
         overall_status = "ok" if all(s["status"] == "ok" for s in stages.values()) else "degraded"
 
         return {"status": overall_status, "stages": stages}
+
+    def get_crowwd_closing_bell(self, as_of: Optional[str] = None) -> Dict[str, Any]:
+        """Return Crowwd Closing Bell event metadata, timeline, and progress snapshot."""
+        config = ClosingBellConfig()
+        if as_of:
+            try:
+                parsed_date = datetime.fromisoformat(as_of).date()
+            except ValueError:
+                raise APIServiceError("as_of must be ISO date (YYYY-MM-DD)", code="invalid_as_of")
+        else:
+            parsed_date = datetime.utcnow().date()
+
+        timeline = [
+            {"name": milestone.name, "date": milestone.day.isoformat(), "description": milestone.description}
+            for milestone in build_timeline(config)
+        ]
+
+        return {
+            "event": {
+                "title": config.title,
+                "host": config.host,
+                "tagline": config.tagline,
+                "format": config.format,
+                "virtual_capital_inr": config.virtual_capital_inr,
+                "universe": config.universe,
+                "start_date": config.start_date.isoformat(),
+                "end_date": config.end_date.isoformat(),
+            },
+            "snapshot": simulation_snapshot(as_of=parsed_date, config=config),
+            "timeline": timeline,
+            "rewards": rewards_catalogue(),
+        }
+
+
+    def get_crowwd_playbook(
+        self,
+        as_of: Optional[str] = None,
+        risk_level: str = "balanced",
+        style: str = "hybrid",
+    ) -> Dict[str, Any]:
+        """Return participant-focused winning playbook for the Crowwd competition."""
+        if as_of:
+            try:
+                parsed_date = datetime.fromisoformat(as_of).date()
+            except ValueError:
+                raise APIServiceError("as_of must be ISO date (YYYY-MM-DD)", code="invalid_as_of")
+        else:
+            parsed_date = datetime.utcnow().date()
+
+        return {
+            "as_of": parsed_date.isoformat(),
+            "playbook": competitor_playbook(
+                as_of=parsed_date,
+                risk_level=risk_level,
+                style=style,
+                config=ClosingBellConfig(),
+            ),
+        }
+    def get_strategy_methods(self) -> Dict[str, Any]:
+        """Return strategy method catalogue (value-investing and algorithmic tracks)."""
+        catalogue = get_strategy_method_catalogue()
+        method_count = sum(len(methods) for methods in catalogue.values())
+        return {
+            "tracks": catalogue,
+            "summary": {
+                "track_count": len(catalogue),
+                "method_count": method_count,
+            },
+        }
 
     def _error_response(self, error: APIServiceError) -> Tuple[int, Dict[str, Any]]:
         return error.status_code, {
