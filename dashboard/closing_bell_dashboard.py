@@ -9,6 +9,7 @@ from src.research.crowwd_closing_bell import (
     rewards_catalogue,
     simulation_snapshot,
 )
+from src.strategies.method_catalog import get_strategy_method_catalogue
 
 
 st.set_page_config(page_title="Crowwd: The Closing Bell", layout="wide")
@@ -65,6 +66,22 @@ st.write(
 st.subheader("Rewards")
 for reward in rewards_catalogue():
     st.markdown(f"- {reward}")
+
+st.subheader("Crowwd Strategy Tracks")
+catalogue = get_strategy_method_catalogue()
+for track, methods in catalogue.items():
+    st.markdown(f"#### {track.replace('_', ' ').title()}")
+    methods_df = pd.DataFrame(
+        [
+            {
+                "Method": method["name"],
+                "Objective": method["objective"],
+                "Signals": ", ".join(method["signals"]),
+            }
+            for method in methods
+        ]
+    )
+    st.dataframe(methods_df, use_container_width=True, hide_index=True)
 
 st.success(
     "31 days. One financial year transition. If you believe you belong where real financial decisions are made, prove it here first."

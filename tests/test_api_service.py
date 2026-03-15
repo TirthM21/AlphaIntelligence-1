@@ -156,6 +156,23 @@ def test_health_contracts_include_pipeline_and_provider_summary():
     assert set(pipeline_payload["stages"].keys()) == {"database", "signals", "performance"}
 
 
+def test_crowwd_event_and_strategy_method_contracts():
+    service = APIService(db_manager=StubDBManager())
+
+    status, event_payload = service.handle_request("/events/crowwd/closing-bell", as_of="2026-03-30")
+    assert status == 200
+    assert event_payload["event"]["title"] == "Crowwd: The Closing Bell"
+    assert event_payload["snapshot"]["phase"] == "fy-end-volatility"
+    assert len(event_payload["timeline"]) == 4
+    assert any("Pre-Placement Interview" in reward for reward in event_payload["rewards"])
+
+    status, methods_payload = service.handle_request("/strategies/methods")
+    assert status == 200
+    assert set(methods_payload["tracks"].keys()) == {"value_investing", "algorithmic"}
+    assert methods_payload["summary"]["track_count"] == 2
+    assert methods_payload["summary"]["method_count"] >= 6
+
+
 def test_error_handling_contract_for_bad_inputs_and_unknown_route():
     service = APIService(db_manager=EmptyDBManager())
 
@@ -180,3 +197,7 @@ def test_error_handling_contract_for_bad_inputs_and_unknown_route():
     status, pipeline = service.handle_request("/health/pipeline")
     assert status == 200
     assert pipeline["stages"]["database"]["status"] == "degraded"
+
+    status, invalid_as_of = service.handle_request("/events/crowwd/closing-bell", as_of="03-30-2026")
+    assert status == 400
+    assert invalid_as_of["error"]["code"] == "invalid_as_of"

@@ -33,8 +33,8 @@ jobs:
       - name: Get current date
         id: date
         run: |
-          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "time=$(date +'%H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          echo "time=$(date +'%H:%M:%S')" >> "$GITHUB_OUTPUT"
 
       - name: Check existing fundamental cache
         id: cache-check
@@ -42,7 +42,7 @@ jobs:
           if [ -d "data/fundamentals_cache" ]; then
             CACHE_COUNT=$(ls data/fundamentals_cache/*_fundamentals.json 2>/dev/null | wc -l | tr -d ' ')
             echo "✓ Found existing fundamental cache"
-            echo "cached_stocks=$CACHE_COUNT" >> $GITHUB_OUTPUT
+            echo "cached_stocks=$CACHE_COUNT" >> "$GITHUB_OUTPUT"
             echo "  Cached stocks: $CACHE_COUNT"
 
             # Show cache age distribution
@@ -54,7 +54,7 @@ jobs:
           else
             echo "⚠ No existing cache, will create"
             mkdir -p data/fundamentals_cache
-            echo "cached_stocks=0" >> $GITHUB_OUTPUT
+            echo "cached_stocks=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Python
@@ -84,63 +84,63 @@ jobs:
           echo "  - Cached fundamentals: $CACHED_STOCKS stocks"
           echo ""
 
-          # Create output directories
-          mkdir -p data/daily_scans
+          mkdir -p data/daily_scans data/logs
+
+          # Primary run: daily momentum production flow.
+          python run_optimized_scan.py \
+            --conservative \
+            --git-storage \
+            --prefetch-storage \
+            --send-email \
+            --universe-source exchange \
+            --strategy daily_momentum
+
+      - name: Run strategy packs (value + algorithmic)
+        if: always()
+        run: |
           mkdir -p data/logs
 
-          # Conservative mode to avoid rate limits
-          # --git-storage flag enables Git-based fundamental storage
-          python run_optimized_scan.py --conservative --git-storage --prefetch-storage --send-email --universe-source exchange
+          echo "=== Strategy Pack: Value Investing (long_term adapter) ==="
+          python run_optimized_scan.py \
+            --conservative \
+            --git-storage \
+            --prefetch-storage \
+            --no-email \
+            --universe-source exchange \
+            --limit 120 \
+            --strategy long_term | tee data/logs/value_investing_scan.log
+
+          echo "=== Strategy Pack: Algorithmic Momentum (daily adapter) ==="
+          python run_optimized_scan.py \
+            --conservative \
+            --git-storage \
+            --prefetch-storage \
+            --no-email \
+            --universe-source exchange \
+            --limit 120 \
+            --strategy daily_momentum | tee data/logs/algo_momentum_scan.log
 
       - name: Show fundamental refresh stats
         if: always()
         run: |
           echo "=== Fundamental Cache Statistics ==="
-          if [ -f "data/fundamentals_cache/metadata.json" ]; then
-            echo "Latest updates:"
-            python3 <<'PYTHON_SCRIPT'
-            import json
-            from datetime import datetime
-
-            try:
-                with open("data/fundamentals_cache/metadata.json", "r") as f:
-                    metadata = json.load(f)
-
-                # Show last 10 updated stocks
-                updates = [(ticker, data["last_updated"]) for ticker, data in metadata.items()]
-                updates.sort(key=lambda x: x[1], reverse=True)
-
-                print(f"Total tracked: {len(updates)} stocks")
-                print("\nLast 10 updates:")
-                for ticker, timestamp in updates[:10]:
-                    dt = datetime.fromisoformat(timestamp)
-                    formatted = dt.strftime("%Y-%m-%d %H:%M")
-                    print(f"  {ticker}: {formatted}")
-            except Exception as e:
-                print(f"Could not read metadata: {e}")
-            PYTHON_SCRIPT
-          else
-            echo "No metadata file found"
-          fi
-
+          python3 scripts/diagnostics/show_fundamental_cache_stats.py
       - name: Commit updated fundamental cache
         id: commit
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # Add fundamental cache directory
           git add data/fundamentals_cache/
 
-          # Check if there are changes
           if git diff --staged --quiet; then
             echo "No fundamental cache changes to commit"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             CHANGED_FILES=$(git diff --staged --name-only | wc -l)
             echo "Committing $CHANGED_FILES updated fundamental files"
             git commit -m "chore: update fundamental cache ($CHANGED_FILES stocks) - ${{ steps.date.outputs.date }}"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Push changes
@@ -160,8 +160,8 @@ jobs:
             data/logs/
             data/daily_newsletter.md
             data/charts/
-          if-no-files-found: warn  # Don't fail if no files found
-          retention-days: 90  # Keep screening results for 90 days
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Cache size report
         if: always()

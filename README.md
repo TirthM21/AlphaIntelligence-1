@@ -95,6 +95,15 @@ General connection-string format: `<dialect>[+driver]://<username>:<password>@<h
 
 > **Command example consistency note:** examples above are NSE-first and represent the current production target.
 
+### API Service Extensions
+
+The in-repo API service (`src/api/service.py`) includes additional event + strategy metadata endpoints:
+
+- `/events/crowwd/closing-bell` → Crowwd timeline, rewards, and live phase snapshot (`as_of=YYYY-MM-DD` optional).
+- `/strategies/methods` → method catalogue grouped into `value_investing` and `algorithmic` tracks.
+
+These contracts are covered in `tests/test_api_service.py`.
+
 ### YAML Grid Experiment Config
 
 `run_experiments.py` reads parameter grids from YAML, executes walk-forward windows, and writes config/metrics/artifact manifests under `data/experiments/<run_id>/`.
